@@ -87,6 +87,7 @@ async function loadSample(file: File | undefined, trackIndex: number = currentLo
 }
 
 function highlightCurrentTrack(trackIndex: number) {
+  currentLoadTrack = trackIndex;
   const channels = document.querySelectorAll('.channel');
   channels.forEach((ch, i) => ch.classList.toggle('selected', i === trackIndex));
   pianoRoll.setActiveTrack(trackIndex);
@@ -295,10 +296,10 @@ function refreshAllUI() {
     if (btn) btn.classList.toggle('active-solo', engine.tracks[i].solo);
   });
 
-  // Sample name readout
-  const loadedTrack = engine.tracks.find(t => t.sampleName);
-  if (loadedTrack) {
-    setStatus(`${loadedTrack.name}: ${loadedTrack.sampleName}`);
+  // Sample name readout (reflects what a LOAD would target — the active track)
+  const activeTrack = engine.tracks[currentLoadTrack];
+  if (activeTrack?.sampleName) {
+    setStatus(`${activeTrack.name}: ${activeTrack.sampleName}`);
   } else {
     setStatus('no sample');
   }
@@ -424,6 +425,8 @@ declare global {
     instrument: InstrumentPanel;
     playlist: PlaylistBar;
     openProject: () => Promise<void>;
+    loadSample: (file: File, trackIndex?: number) => Promise<void>;
+    currentLoadTrack: () => number;
     audioBufferToWav: (buffer: AudioBuffer) => Blob;
   }
 }
@@ -433,4 +436,6 @@ window.pianoRoll = pianoRoll;
 window.instrument = instrument;
 window.playlist = playlist;
 window.openProject = openProject;
+window.loadSample = loadSample;
+window.currentLoadTrack = () => currentLoadTrack;
 window.audioBufferToWav = audioBufferToWav;

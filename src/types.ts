@@ -63,6 +63,8 @@ export interface Track extends MixerChannel {
   sample: AudioBuffer | null;
   sampleData: ArrayBuffer | null;
   sampleName: string | null;
+  sampleStart: number; // trim: start offset in seconds (0 = from the top)
+  sampleEnd: number;   // trim: end offset in seconds (Infinity = to the tail)
   gain: GainNode | null;
   panner: StereoPannerNode | null;
   pattern: boolean[];   // ссылка на данные активного паттерна (сэмпл-слой)
@@ -77,6 +79,8 @@ export interface TrackSettings {
   name: string;
   sampleName: string | null;
   sampleData: string | null; // base64
+  sampleStart?: number; // trim (optional so older saves still load)
+  sampleEnd?: number;
   volume: number;
   mute: boolean;
   solo: boolean;

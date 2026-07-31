@@ -32,11 +32,11 @@ export class AudioEngine {
 
   // Tracks: each track has sample, gain, panner, pattern (16 steps), pianoGrid (24x16), mute/solo/volume/pan
   tracks: Track[] = [
-    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
   ];
   trackCount = 5;
   _activeTrackCount = 5;
@@ -385,13 +385,48 @@ export class AudioEngine {
     const ctx = this.ensureContext();
     if (!ctx) throw new Error('Web Audio not available');
     const data = await file.arrayBuffer();
+    const stored = data.slice(0); // decodeAudioData() detaches its input — keep a copy
     const buffer = await ctx.decodeAudioData(data);
     const track = this.tracks[trackIndex];
     track.sample = buffer;
-    track.sampleData = data;
+    track.sampleData = stored;
     track.sampleName = file.name;
     track.name = file.name.replace(/\.[^.]+$/, '');
+    track.sampleStart = 0;     // fresh trim = whole file
+    track.sampleEnd = Infinity;
+    this._notifyPatternChange();
     return buffer;
+  }
+
+  // Resolve the effective trim window for a loaded sample (seconds).
+  _sampleBounds(track: Track): { start: number; end: number } {
+    const dur = track.sample?.duration || 0;
+    const start = Math.max(0, Math.min(track.sampleStart, dur - 0.001));
+    const end = Math.max(start + 0.001, Math.min(track.sampleEnd, dur));
+    return { start, end };
+  }
+
+  // Set the trim window for a loaded sample (seconds). Clamps to the buffer.
+  // Deliberately does NOT notify listeners: trim drags fire per-move and the
+  // instrument panel redraws itself; no other view reads the trim.
+  setSampleTrim(trackIndex: number, start: number, end: number) {
+    const track = this.tracks[trackIndex];
+    if (!track || !track.sample) return;
+    const dur = track.sample.duration;
+    track.sampleStart = Math.max(0, Math.min(start, dur - 0.001));
+    track.sampleEnd = Math.max(track.sampleStart + 0.001, Math.min(end, dur));
+  }
+
+  // Remove the loaded sample (and trim) from a track.
+  clearSample(trackIndex: number) {
+    const track = this.tracks[trackIndex];
+    if (!track) return;
+    track.sample = null;
+    track.sampleData = null;
+    track.sampleName = null;
+    track.sampleStart = 0;
+    track.sampleEnd = Infinity;
+    this._notifyPatternChange();
   }
 
   // Set pattern for a track (array of 16 booleans)
@@ -481,7 +516,7 @@ export class AudioEngine {
   }
 
   // Play a single sample on a track immediately (for preview)
-  playSample(trackIndex: number) {
+  playSample(trackIndex: number, offset = 0) {
     const ctx = this.ensureContext();
     if (!ctx) return;
     const track = this.tracks[trackIndex];
@@ -489,7 +524,9 @@ export class AudioEngine {
     const src = ctx.createBufferSource();
     src.buffer = track.sample;
     src.connect(track.gain);
-    src.start();
+    const { start, end } = this._sampleBounds(track);
+    const begin = Math.min(Math.max(offset, start), end);
+    src.start(0, begin, end - begin);
   }
 
   // --- Transport with lookahead scheduling ---
@@ -511,7 +548,8 @@ export class AudioEngine {
       const src = this.ctx!.createBufferSource();
       src.buffer = track.sample;
       src.connect(track.gain);
-      src.start(time);
+      const { start, end } = this._sampleBounds(track);
+      src.start(time, start, end - start);
     }
 
     // 2) Synth note playback (if piano grid has notes on this step)
@@ -622,7 +660,8 @@ export class AudioEngine {
             const src = offline.createBufferSource();
             src.buffer = track.sample;
             src.connect(gain);
-            src.start(time);
+            const { start, end } = this._sampleBounds(track);
+            src.start(time, start, end - start);
           }
           // 2) Synth note playback (if piano grid has notes on this step)
           if (srcData.pianoGrid) {
@@ -688,6 +727,8 @@ export class AudioEngine {
         name: t.name,
         sampleName: t.sampleName,
         sampleData: t.sampleData ? this._arrayBufferToBase64(t.sampleData) : null,
+        sampleStart: t.sampleStart,
+        sampleEnd: Number.isFinite(t.sampleEnd) ? t.sampleEnd : undefined,
         volume: t.volume,
         mute: t.mute,
         solo: t.solo,
@@ -780,14 +821,17 @@ export class AudioEngine {
       // Restore sample data (decode base64 -> AudioBuffer)
       track.sample = null;
       track.sampleData = null;
+      track.sampleStart = typeof saved.sampleStart === 'number' ? saved.sampleStart : 0;
+      track.sampleEnd = typeof saved.sampleEnd === 'number' ? saved.sampleEnd : Infinity;
       if (saved.sampleData) {
         try {
           const data = this._base64ToArrayBuffer(saved.sampleData);
+          const stored = data.slice(0); // decodeAudioData() detaches its input
           const ctx = this.ensureContext();
           if (!ctx) throw new Error('Web Audio not available');
           const buffer = await ctx.decodeAudioData(data);
           track.sample = buffer;
-          track.sampleData = data;
+          track.sampleData = stored;
         } catch (err) {
           console.warn(`Failed to decode saved sample for track ${i}:`, err);
           track.sample = null;
@@ -820,6 +864,8 @@ export class AudioEngine {
       t.sample = null;
       t.sampleData = null;
       t.sampleName = null;
+      t.sampleStart = 0;
+      t.sampleEnd = Infinity;
       t.volume = 1;
       t.mute = false;
       t.solo = false;
