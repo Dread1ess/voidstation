@@ -1,6 +1,8 @@
 // Entry point: wires the transport, step sequencer, mixer, and audio engine.
 // Classic script (loaded after src/audio/engine.js, src/sequencer.js), works over file:// too.
 
+const STORAGE_KEY = 'voidstation-project-v1';
+
 const engine = new window.AudioEngine();
 const sequencer = new window.StepSequencer(engine);
 const pianoRoll = new window.PianoRoll(engine);
@@ -10,6 +12,9 @@ const btnLoad = document.getElementById('btn-load');
 const btnPlay = document.getElementById('btn-play');
 const btnStop = document.getElementById('btn-stop');
 const btnRec = document.getElementById('btn-rec');
+const btnSave = document.getElementById('btn-save');
+const btnOpen = document.getElementById('btn-open');
+const btnNew = document.getElementById('btn-new');
 const bpmInput = document.getElementById('bpm-input');
 const sampleName = document.getElementById('sample-name');
 const dropOverlay = document.getElementById('drop-overlay');
@@ -110,15 +115,20 @@ bpmInput.addEventListener('change', () => {
 });
 
 // --- Mixer faders (drag to set volume) ---
+const faders = [];
 document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
   const cap = fader.querySelector('.fader-cap');
   const faderHeight = fader.clientHeight;
   const capHeight = cap.offsetHeight;
 
+  function setCapPosition(t) {
+    cap.style.top = `${t * (faderHeight - capHeight)}px`;
+  }
+
   function setLevel(clientY) {
     const rect = fader.getBoundingClientRect();
     const t = Math.max(0, Math.min(1, (clientY - rect.top - capHeight / 2) / (faderHeight - capHeight)));
-    cap.style.top = `${t * (faderHeight - capHeight)}px`;
+    setCapPosition(t);
     engine.setTrackVolume(faderIndex, t);
     // Update meter fill proportionally
     const meterFill = fader.parentElement.querySelector('.meter-fill');
@@ -135,25 +145,108 @@ document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
   });
   fader.addEventListener('pointerup', () => { cap._dragging = false; });
   fader.addEventListener('pointercancel', () => { cap._dragging = false; });
+
+  faders.push({ fader, cap, setLevel, setCapPosition });
 });
 
 // --- Mixer mute/solo buttons ---
+const muteButtons = [];
 document.querySelectorAll('.mini-btn[data-mute]').forEach((btn) => {
   const channel = btn.closest('.channel');
   const index = Array.from(document.querySelectorAll('.channel')).indexOf(channel);
+  muteButtons[index] = btn;
   btn.addEventListener('click', () => {
     engine.toggleMute(index);
     btn.classList.toggle('active-mute', engine.tracks[index].mute);
   });
 });
+const soloButtons = [];
 document.querySelectorAll('.mini-btn[data-solo]').forEach((btn) => {
   const channel = btn.closest('.channel');
   const index = Array.from(document.querySelectorAll('.channel')).indexOf(channel);
+  soloButtons[index] = btn;
   btn.addEventListener('click', () => {
     engine.toggleSolo(index);
     btn.classList.toggle('active-solo', engine.tracks[index].solo);
   });
 });
+
+// Refresh the whole UI to match current engine state (used after load/new/clear)
+function refreshAllUI() {
+  bpmInput.value = engine.bpm.toFixed(3);
+
+  // Step sequencer grid
+  sequencer.render();
+
+  // Piano roll
+  pianoRoll.render();
+
+  // Mixer faders + meters
+  faders.forEach((f, i) => {
+    const t = engine.tracks[i].volume;
+    f.setCapPosition(t);
+    const meterFill = f.fader.parentElement.querySelector('.meter-fill');
+    if (meterFill) meterFill.style.height = `${t * 100}%`;
+  });
+
+  // Mute/solo buttons
+  muteButtons.forEach((btn, i) => {
+    if (btn) btn.classList.toggle('active-mute', engine.tracks[i].mute);
+  });
+  soloButtons.forEach((btn, i) => {
+    if (btn) btn.classList.toggle('active-solo', engine.tracks[i].solo);
+  });
+
+  // Sample name readout
+  const loadedTrack = engine.tracks.find(t => t.sampleName);
+  if (loadedTrack) {
+    setStatus(`${loadedTrack.name}: ${loadedTrack.sampleName}`);
+  } else {
+    setStatus('no sample');
+  }
+}
+
+// --- Project save / load (localStorage) ---
+function saveProject() {
+  try {
+    const json = JSON.stringify(engine.serialize());
+    localStorage.setItem(STORAGE_KEY, json);
+    setStatus('project saved');
+  } catch (err) {
+    console.error('Save failed:', err);
+    setStatus('save failed (storage full?)', true);
+  }
+}
+
+async function openProject() {
+  const json = localStorage.getItem(STORAGE_KEY);
+  if (!json) {
+    setStatus('no saved project', true);
+    return;
+  }
+  try {
+    await engine.deserialize(JSON.parse(json));
+    refreshAllUI();
+    setStatus('project loaded');
+  } catch (err) {
+    console.error('Open failed:', err);
+    setStatus('could not load project', true);
+  }
+}
+
+function newProject() {
+  engine.clearProject();
+  localStorage.removeItem(STORAGE_KEY);
+  refreshAllUI();
+  setStatus('new project');
+}
+
+btnSave.addEventListener('click', saveProject);
+btnOpen.addEventListener('click', openProject);
+btnNew.addEventListener('click', newProject);
+
+// Auto-load the saved project on startup
+openProject();
 
 // --- Track selector via keyboard ---
 window.addEventListener('keydown', (e) => {

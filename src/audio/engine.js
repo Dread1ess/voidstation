@@ -19,11 +19,11 @@ class AudioEngine {
 
     // Tracks: each track has sample, gain, pattern (16 steps), pianoGrid (24x16), mute/solo/volume
     this.tracks = [
-      { name: 'Kick',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine' },
-      { name: 'Snare',  sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise' },
-      { name: 'Bass',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth' },
-      { name: 'Synth',  sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square' },
-      { name: 'Pads',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle' },
+      { name: 'Kick',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine' },
+      { name: 'Snare',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise' },
+      { name: 'Bass',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth' },
+      { name: 'Synth',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square' },
+      { name: 'Pads',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle' },
     ];
     this.trackCount = 5;
     this._activeTrackCount = 5;
@@ -121,6 +121,8 @@ class AudioEngine {
     const buffer = await ctx.decodeAudioData(data);
     const track = this.tracks[trackIndex];
     track.sample = buffer;
+    track.sampleData = data;
+    track.sampleName = file.name;
     track.name = file.name.replace(/\.[^.]+$/, '');
     return buffer;
   }
@@ -282,6 +284,121 @@ class AudioEngine {
   // Stop everything (transport + any one-shots)
   stop() {
     this.stopTransport();
+  }
+
+  // --- Project serialization (localStorage) ---
+
+  // Convert an ArrayBuffer to a base64 string (chunked to avoid call stack limits)
+  _arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000; // 32KB chunks
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  _base64ToArrayBuffer(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  // Return a plain JSON-serializable snapshot of the whole project.
+  // Note: sample data is stored as base64 inside the snapshot (may be large).
+  serialize() {
+    return {
+      version: 1,
+      bpm: this.bpm,
+      tracks: this.tracks.map((t) => ({
+        name: t.name,
+        sampleName: t.sampleName,
+        sampleData: t.sampleData ? this._arrayBufferToBase64(t.sampleData) : null,
+        pattern: [...t.pattern],
+        pianoGrid: t.pianoGrid.map((row) => [...row]),
+        volume: t.volume,
+        mute: t.mute,
+        solo: t.solo,
+        synthType: t.synthType,
+      })),
+    };
+  }
+
+  // Restore a project from a serialized snapshot (async because it decodes audio).
+  async deserialize(state) {
+    if (!state || !Array.isArray(state.tracks)) throw new Error('Invalid project data');
+
+    this.stopTransport();
+    this.bpm = state.bpm || 124;
+    this._updateStepDuration();
+
+    for (let i = 0; i < this.tracks.length; i++) {
+      const saved = state.tracks[i];
+      if (!saved) continue;
+      const track = this.tracks[i];
+      track.name = saved.name || track.name;
+      track.sampleName = saved.sampleName || null;
+      track.pattern = Array.isArray(saved.pattern) ? [...saved.pattern] : new Array(16).fill(false);
+      track.volume = saved.volume !== undefined ? saved.volume : 1;
+      track.mute = !!saved.mute;
+      track.solo = !!saved.solo;
+      track.synthType = saved.synthType || 'sine';
+      if (Array.isArray(saved.pianoGrid)) {
+        for (let p = 0; p < 24; p++) {
+          for (let s = 0; s < 16; s++) {
+            track.pianoGrid[p][s] = !!(saved.pianoGrid[p] && saved.pianoGrid[p][s]);
+          }
+        }
+      }
+      // Restore sample data (decode base64 -> AudioBuffer)
+      track.sample = null;
+      track.sampleData = null;
+      if (saved.sampleData) {
+        try {
+          const data = this._base64ToArrayBuffer(saved.sampleData);
+          const buffer = await this.ensureContext().decodeAudioData(data);
+          track.sample = buffer;
+          track.sampleData = data;
+        } catch (err) {
+          console.warn(`Failed to decode saved sample for track ${i}:`, err);
+          track.sample = null;
+          track.sampleData = null;
+        }
+      }
+    }
+
+    this._rebuildAllGains();
+    this._notifyStateChange();
+  }
+
+  // Reset all tracks to a blank project (keeps gain nodes / context).
+  clearProject() {
+    this.stopTransport();
+    this.bpm = 124;
+    this._updateStepDuration();
+    this.tracks.forEach((t, i) => {
+      const defaults = [
+        { name: 'Kick', synthType: 'sine' },
+        { name: 'Snare', synthType: 'noise' },
+        { name: 'Bass', synthType: 'sawtooth' },
+        { name: 'Synth', synthType: 'square' },
+        { name: 'Pads', synthType: 'triangle' },
+      ][i];
+      t.name = defaults.name;
+      t.synthType = defaults.synthType;
+      t.sample = null;
+      t.sampleData = null;
+      t.sampleName = null;
+      t.pattern = new Array(16).fill(false);
+      t.pianoGrid = this._createPianoGrid();
+      t.volume = 1;
+      t.mute = false;
+      t.solo = false;
+    });
+    this._rebuildAllGains();
+    this._notifyStateChange();
   }
 }
 

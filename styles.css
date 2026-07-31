@@ -721,6 +721,7 @@ body {
   .transport { flex-wrap: wrap; height: auto; min-height: 56px; padding: 8px 12px; }
   .channel { min-width: 72px; }
   .channel-head .knob { width: 26px; height: 26px; }
+  .t-project { order: 4; }
 }
 
 @media (max-height: 680px) {

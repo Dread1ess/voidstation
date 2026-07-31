@@ -11,6 +11,15 @@ class StepSequencer {
   // Build the step grid inside the given container element
   mount(container) {
     this.container = container;
+    this.render();
+    // Listen for engine transport to highlight current step
+    this.engine.onStepChange(() => this._syncPlayState());
+  }
+
+  // (Re)build the step grid DOM from current engine state
+  render() {
+    if (!this.container) return;
+    const container = this.container;
     container.innerHTML = '';
     container.classList.add('step-sequencer');
 
@@ -22,6 +31,7 @@ class StepSequencer {
     container.appendChild(header);
 
     // Track rows
+    this.stepElements = [];
     this.engine.tracks.forEach((track, trackIndex) => {
       const row = document.createElement('div');
       row.className = 'seq-row';
@@ -50,8 +60,7 @@ class StepSequencer {
       container.appendChild(row);
     });
 
-    // Listen for engine transport to highlight current step
-    this.engine.onStepChange(() => this._syncPlayState());
+    this.currentStep = -1;
   }
 
   _onStepClick(trackIndex, stepIndex, btn) {
