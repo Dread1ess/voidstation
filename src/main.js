@@ -135,6 +135,40 @@ bpmInput.addEventListener('change', () => {
         bpmInput.value = engine.bpm.toFixed(3);
     }
 });
+// --- Mixer height (drag the top edge like a window border, persisted) ---
+const mixer = document.querySelector('.mixer');
+const MIXER_H_KEY = 'voidstation-mixer-height';
+const MIN_MIXER_H = 128;
+const maxMixerH = () => Math.max(MIN_MIXER_H, window.innerHeight - 200);
+if (mixer) {
+    const savedH = parseInt(localStorage.getItem(MIXER_H_KEY) || '', 10);
+    if (Number.isFinite(savedH)) {
+        mixer.style.height = `${Math.max(MIN_MIXER_H, Math.min(savedH, maxMixerH()))}px`;
+    }
+    const handle = document.createElement('div');
+    handle.className = 'mixer-resize-handle';
+    handle.title = 'Drag to resize the mixer';
+    mixer.prepend(handle);
+    handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        handle.setPointerCapture(e.pointerId);
+        const startY = e.clientY;
+        const startH = mixer.getBoundingClientRect().height;
+        const move = (me) => {
+            const h = Math.max(MIN_MIXER_H, Math.min(maxMixerH(), startH + (startY - me.clientY)));
+            mixer.style.height = `${h}px`;
+        };
+        const up = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', up);
+            handle.removeEventListener('pointercancel', up);
+            localStorage.setItem(MIXER_H_KEY, String(Math.round(mixer.getBoundingClientRect().height)));
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
+    });
+}
 const faders = [];
 document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
     const cap = fader.querySelector('.fader-cap');

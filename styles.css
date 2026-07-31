@@ -848,6 +848,32 @@ body {
   border-top: 1px solid var(--edge);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 -2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
+  overflow: hidden;
+}
+/* Resize grip: drag the mixer's top edge up/down like a window border. */
+.mixer-resize-handle {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 6;
+  touch-action: none;
+}
+.mixer-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 50%;
+  transform: translateX(-50%);
+  width: 64px; height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+.mixer-resize-handle:hover::after,
+.mixer-resize-handle:active::after {
+  background: var(--accent-dim);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 0 6px rgba(0, 217, 208, 0.4);
 }
 .mixer-label {
   position: absolute; top: 6px; left: 12px;
