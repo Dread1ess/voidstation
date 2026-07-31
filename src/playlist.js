@@ -147,4 +147,3 @@ export class PlaylistBar {
         }
     }
 }
-window.PlaylistBar = PlaylistBar;

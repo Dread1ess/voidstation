@@ -288,10 +288,3 @@ export class PianoRoll {
     }
   }
 }
-
-declare global {
-  interface Window {
-    PianoRoll: typeof PianoRoll;
-  }
-}
-window.PianoRoll = PianoRoll;

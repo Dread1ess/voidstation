@@ -108,4 +108,3 @@ export class StepSequencer {
         });
     }
 }
-window.StepSequencer = StepSequencer;

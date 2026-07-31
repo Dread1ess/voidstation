@@ -619,10 +619,3 @@ export class AudioEngine {
     this._notifyPatternChange();
   }
 }
-
-declare global {
-  interface Window {
-    AudioEngine: typeof AudioEngine;
-  }
-}
-window.AudioEngine = AudioEngine;

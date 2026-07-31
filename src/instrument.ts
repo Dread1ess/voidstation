@@ -111,10 +111,3 @@ export class InstrumentPanel {
     this.engine.playSynthNote(this.trackIndex, 60, null, 0.3);
   }
 }
-
-declare global {
-  interface Window {
-    InstrumentPanel: typeof InstrumentPanel;
-  }
-}
-window.InstrumentPanel = InstrumentPanel;

@@ -565,4 +565,3 @@ export class AudioEngine {
         this._notifyPatternChange();
     }
 }
-window.AudioEngine = AudioEngine;

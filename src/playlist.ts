@@ -172,10 +172,3 @@ export class PlaylistBar {
     }
   }
 }
-
-declare global {
-  interface Window {
-    PlaylistBar: typeof PlaylistBar;
-  }
-}
-window.PlaylistBar = PlaylistBar;

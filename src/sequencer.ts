@@ -123,10 +123,3 @@ export class StepSequencer {
     });
   }
 }
-
-declare global {
-  interface Window {
-    StepSequencer: typeof StepSequencer;
-  }
-}
-window.StepSequencer = StepSequencer;

@@ -254,4 +254,3 @@ export class PianoRoll {
         }
     }
 }
-window.PianoRoll = PianoRoll;
