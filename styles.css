@@ -578,9 +578,7 @@ body {
 
 .step-sequencer-container {
   flex: none;
-  height: 112px; /* header + 2 rows * 32px + padding */
-  display: flex;
-  align-items: flex-start;
+  height: auto; /* fits content: one row per track, never overlaps the piano roll below */
   padding: 8px 0 0;
   border-bottom: 1px solid var(--edge);
   background: var(--panel-2);
@@ -722,14 +720,6 @@ body {
    STEP SEQUENCER
    ============================================================ */
 
-.step-sequencer-container {
-  grid-column: 2;
-  grid-row: 1 / 7;
-  display: flex;
-  align-items: start;
-  padding-top: 4px;
-}
-
 .step-sequencer {
   display: grid;
   grid-template-columns: 72px repeat(16, 40px);
@@ -824,11 +814,6 @@ body {
 }
 
 @media (max-width: 720px) {
-  .step-sequencer-container {
-    grid-column: 1 / 3;
-    grid-row: 7;
-    margin-top: 8px;
-  }
   .step-sequencer {
     grid-template-columns: 54px repeat(16, 28px);
     overflow-x: auto;
