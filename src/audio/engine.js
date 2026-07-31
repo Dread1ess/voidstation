@@ -17,13 +17,13 @@ class AudioEngine {
     this.lookahead = 0.1;            // schedule 100ms ahead
     this.scheduleInterval = 25;      // scheduler tick every 25ms
 
-    // Tracks: each track has sample, gain, pattern (16 steps), mute/solo/volume
+    // Tracks: each track has sample, gain, pattern (16 steps), pianoGrid (24x16), mute/solo/volume
     this.tracks = [
-      { name: 'Kick',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
-      { name: 'Snare',  sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
-      { name: 'Bass',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
-      { name: 'Synth',  sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
-      { name: 'Pads',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
+      { name: 'Kick',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine' },
+      { name: 'Snare',  sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise' },
+      { name: 'Bass',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth' },
+      { name: 'Synth',  sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square' },
+      { name: 'Pads',   sample: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle' },
     ];
     this.trackCount = 5;
     this._activeTrackCount = 5;
@@ -48,8 +48,48 @@ class AudioEngine {
     this._stepListeners.forEach(l => l());
   }
 
+  _createPianoGrid() {
+    // 24 pitch rows (0..23, 0 = B4/MIDI 71, 23 = C3/MIDI 48) x 16 steps
+    return Array.from({ length: 24 }, () => new Array(16).fill(false));
+  }
+
+  midiToFreq(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  playSynthNote(trackIndex, midiNote, time = null, duration = 0.2) {
+    if (!this.ensureContext()) return;
+    const track = this.tracks[trackIndex];
+    if (!track) return;
+
+    const ctxTime = time !== null ? time : this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const env = this.ctx.createGain();
+
+    osc.type = track.synthType || 'sawtooth';
+    osc.frequency.setValueAtTime(this.midiToFreq(midiNote), ctxTime);
+
+    // Envelope (Attack - Release)
+    env.gain.setValueAtTime(0.0001, ctxTime);
+    env.gain.linearRampToValueAtTime(0.25, ctxTime + 0.01);
+    env.gain.exponentialRampToValueAtTime(0.0001, ctxTime + Math.max(0.05, duration));
+
+    osc.connect(env);
+    env.connect(track.gain);
+
+    osc.start(ctxTime);
+    osc.stop(ctxTime + Math.max(0.05, duration) + 0.05);
+  }
+
   get hasSample() {
     return this.tracks.some(t => t.sample !== null);
+  }
+
+  get hasContent() {
+    return this.tracks.some(t =>
+      t.sample !== null ||
+      (t.pianoGrid && t.pianoGrid.some(row => row.some(active => active)))
+    );
   }
 
   // Lazily create the context. Must be called from a user gesture
@@ -172,15 +212,33 @@ class AudioEngine {
 
   _scheduleStep(time, trackIndex) {
     const track = this.tracks[trackIndex];
-    if (!track.sample || !track.pattern[this.stepIndex]) return;
+    if (!track) return;
+
     // Mute/solo routing
     const anySolo = this.tracks.some(t => t.solo);
     if (anySolo && !track.solo) return;  // solo active, skip non-soloed tracks
     if (track.mute) return;                 // muted tracks silent regardless
-    const src = this.ctx.createBufferSource();
-    src.buffer = track.sample;
-    src.connect(track.gain);
-    src.start(time);
+
+    // 1) Sample playback (if sample loaded and pattern step active)
+    if (track.sample && track.pattern[this.stepIndex]) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = track.sample;
+      src.connect(track.gain);
+      src.start(time);
+    }
+
+    // 2) Synth note playback (if piano grid has notes on this step)
+    if (track.pianoGrid) {
+      const step = this.stepIndex;
+      const noteDuration = this.stepDuration * 0.85;
+      for (let pitch = 0; pitch < 24; pitch++) {
+        if (track.pianoGrid[pitch][step]) {
+          // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
+          const midi = 71 - pitch;
+          this.playSynthNote(trackIndex, midi, time, noteDuration);
+        }
+      }
+    }
   }
 
   _schedulerTick() {

@@ -3,6 +3,7 @@
 
 const engine = new window.AudioEngine();
 const sequencer = new window.StepSequencer(engine);
+const pianoRoll = new window.PianoRoll(engine);
 
 const fileInput = document.getElementById('file-input');
 const btnLoad = document.getElementById('btn-load');
@@ -13,11 +14,18 @@ const bpmInput = document.getElementById('bpm-input');
 const sampleName = document.getElementById('sample-name');
 const dropOverlay = document.getElementById('drop-overlay');
 
-// Current track index for sample loading (0=Kick,1=Snare,2=Bass,3=Synth,4=Pads)
-let currentLoadTrack = 0;
+// Current track index (0=Kick,1=Snare,2=Bass,3=Synth,4=Pads)
+let currentLoadTrack = 3; // Default to Synth
 
-// Initialize step sequencer UI in timeline area
+// Initialize step sequencer UI
 sequencer.mount(document.getElementById('step-sequencer'));
+
+// Initialize Piano Roll UI
+const pianoGridEl = document.getElementById('piano-roll-grid');
+if (pianoGridEl) {
+  pianoRoll.mount(pianoGridEl);
+  pianoRoll.setActiveTrack(3); // Start with Synth track
+}
 
 function syncButtons() {
   btnPlay.classList.toggle('active', engine.isPlaying);
@@ -46,6 +54,7 @@ async function loadSample(file, trackIndex = currentLoadTrack) {
 function highlightCurrentTrack(trackIndex) {
   const channels = document.querySelectorAll('.channel');
   channels.forEach((ch, i) => ch.classList.toggle('selected', i === trackIndex));
+  pianoRoll.setActiveTrack(trackIndex);
 }
 
 btnLoad.addEventListener('click', () => fileInput.click());
@@ -77,8 +86,8 @@ window.addEventListener('drop', (e) => {
 
 // --- Transport ---
 btnPlay.addEventListener('click', () => {
-  if (!engine.hasSample) {
-    setStatus('load a sample first', true);
+  if (!engine.hasContent) {
+    setStatus('load a sample or add notes first', true);
     return;
   }
   engine.startTransport();
@@ -158,3 +167,4 @@ window.addEventListener('keydown', (e) => {
 // Expose for testing/debugging
 window.engine = engine;
 window.sequencer = sequencer;
+window.pianoRoll = pianoRoll;
