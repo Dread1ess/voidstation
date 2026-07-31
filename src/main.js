@@ -125,7 +125,9 @@ syncButtons();
 bpmInput.addEventListener('change', () => {
     const value = parseFloat(bpmInput.value);
     if (Number.isFinite(value) && value > 0) {
+        engine.beginHistory();
         engine.setBpm(value);
+        engine.commitHistory();
         bpmInput.value = value.toFixed(3);
     }
     else {
@@ -154,14 +156,15 @@ document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
     cap.addEventListener('pointerdown', (e) => {
         fader.setPointerCapture(e.pointerId);
         dragging = true;
+        engine.beginHistory();
         setLevel(e.clientY);
     });
     fader.addEventListener('pointermove', (e) => {
         if (dragging)
             setLevel(e.clientY);
     });
-    fader.addEventListener('pointerup', () => { dragging = false; });
-    fader.addEventListener('pointercancel', () => { dragging = false; });
+    fader.addEventListener('pointerup', () => { dragging = false; engine.commitHistory(); });
+    fader.addEventListener('pointercancel', () => { dragging = false; engine.commitHistory(); });
     faders.push({ fader, cap, setLevel, setCapPosition });
 });
 const panKnobs = [];
@@ -182,6 +185,7 @@ document.querySelectorAll('.channel').forEach((ch, i) => {
         dragging = true;
         dragPan = engine.tracks[i].pan;
         dragStartY = e.clientY;
+        engine.beginHistory();
     });
     knob.addEventListener('pointermove', (e) => {
         if (!dragging)
@@ -189,10 +193,14 @@ document.querySelectorAll('.channel').forEach((ch, i) => {
         const pan = Math.max(-1, Math.min(1, dragPan + (dragStartY - e.clientY) / 100));
         applyPan(pan);
     });
-    const endDrag = () => { dragging = false; };
+    const endDrag = () => { dragging = false; engine.commitHistory(); };
     knob.addEventListener('pointerup', endDrag);
     knob.addEventListener('pointercancel', endDrag);
-    knob.addEventListener('dblclick', () => applyPan(0));
+    knob.addEventListener('dblclick', () => {
+        engine.beginHistory();
+        applyPan(0);
+        engine.commitHistory();
+    });
     panKnobs.push({ knob });
 });
 // --- Mixer mute/solo buttons ---
@@ -204,7 +212,9 @@ channels.forEach((ch, i) => {
     muteButtons[i] = muteBtn;
     if (muteBtn) {
         muteBtn.addEventListener('click', () => {
+            engine.beginHistory();
             engine.toggleMute(i);
+            engine.commitHistory();
             muteBtn.classList.toggle('active-mute', engine.tracks[i].mute);
         });
     }
@@ -212,7 +222,9 @@ channels.forEach((ch, i) => {
     soloButtons[i] = soloBtn;
     if (soloBtn) {
         soloBtn.addEventListener('click', () => {
+            engine.beginHistory();
             engine.toggleSolo(i);
+            engine.commitHistory();
             soloBtn.classList.toggle('active-solo', engine.tracks[i].solo);
         });
     }
@@ -275,7 +287,9 @@ async function openProject() {
         return;
     }
     try {
+        engine.beginHistory();
         await engine.deserialize(JSON.parse(json));
+        engine.commitHistory();
         refreshAllUI();
         setStatus('project loaded');
     }
@@ -285,7 +299,9 @@ async function openProject() {
     }
 }
 function newProject() {
+    engine.beginHistory();
     engine.clearProject();
+    engine.commitHistory();
     localStorage.removeItem(STORAGE_KEY);
     refreshAllUI();
     setStatus('new project');
@@ -335,12 +351,39 @@ channels.forEach((ch, i) => {
         setStatus(`Track: ${engine.tracks[i].name}`);
     });
 });
-// --- Track selector via keyboard ---
+// --- Keyboard shortcuts ---
 window.addEventListener('keydown', (e) => {
+    // Let text/number fields handle their own keys (native undo inside inputs).
+    const target = e.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA'))
+        return;
     const keys = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4 };
     if (keys[e.key] !== undefined) {
         highlightCurrentTrack(keys[e.key]);
         setStatus(`Track: ${engine.tracks[keys[e.key]].name}`);
+    }
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+            engine.redo().then(done => { if (done) {
+                refreshAllUI();
+                setStatus('redo');
+            } });
+        }
+        else {
+            engine.undo().then(done => { if (done) {
+                refreshAllUI();
+                setStatus('undo');
+            } });
+        }
+    }
+    else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        engine.redo().then(done => { if (done) {
+            refreshAllUI();
+            setStatus('redo');
+        } });
     }
 });
 window.engine = engine;

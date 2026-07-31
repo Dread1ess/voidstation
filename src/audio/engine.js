@@ -44,6 +44,11 @@ export class AudioEngine {
         this.loopStart = 0;
         this.loopEnd = 0;
         this.loopEnabled = true;
+        // --- Undo / redo (snapshot-based transactions) ---
+        this._undoStack = [];
+        this._redoStack = [];
+        this._txBase = null;
+        this.historyLimit = 20;
         this._loadPatternIntoLive(0);
     }
     // --- Patterns / playlist ---
@@ -136,6 +141,43 @@ export class AudioEngine {
     toggleLoop() {
         this.loopEnabled = !this.loopEnabled;
         this._notifyPatternChange();
+    }
+    get canUndo() { return this._undoStack.length > 0; }
+    get canRedo() { return this._redoStack.length > 0; }
+    // Remember the project state at the start of a user gesture.
+    beginHistory() {
+        this._txBase = JSON.stringify(this.serialize());
+    }
+    // End a gesture: if the state changed, the pre-gesture snapshot becomes an
+    // undo entry (capped at historyLimit); unchanged gestures are discarded.
+    // Any new action clears the redo stack.
+    commitHistory() {
+        if (this._txBase === null)
+            return;
+        const before = this._txBase;
+        this._txBase = null;
+        if (JSON.stringify(this.serialize()) !== before) {
+            this._undoStack.push(before);
+            if (this._undoStack.length > this.historyLimit)
+                this._undoStack.shift();
+            this._redoStack.length = 0;
+        }
+    }
+    async undo() {
+        const snapshot = this._undoStack.pop();
+        if (snapshot === undefined)
+            return false;
+        this._redoStack.push(JSON.stringify(this.serialize()));
+        await this.deserialize(JSON.parse(snapshot));
+        return true;
+    }
+    async redo() {
+        const snapshot = this._redoStack.pop();
+        if (snapshot === undefined)
+            return false;
+        this._undoStack.push(JSON.stringify(this.serialize()));
+        await this.deserialize(JSON.parse(snapshot));
+        return true;
     }
     getPlaylistLength() {
         return this.playlist.length;

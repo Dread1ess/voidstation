@@ -57,7 +57,10 @@ export class PlaylistBar {
         name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
         name.title = 'Pattern name';
         name.addEventListener('change', () => {
-            this.engine.patterns[this.engine.currentPatternIndex].name = name.value.trim() || 'Pattern';
+            const next = name.value.trim() || 'Pattern';
+            this.engine.beginHistory();
+            this.engine.patterns[this.engine.currentPatternIndex].name = next;
+            this.engine.commitHistory();
             name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
             this.render();
         });
@@ -69,7 +72,9 @@ export class PlaylistBar {
         add.title = 'Duplicate current pattern';
         add.textContent = '+';
         add.addEventListener('click', () => {
+            this.engine.beginHistory();
             this.engine.duplicatePattern();
+            this.engine.commitHistory();
             this.render();
         });
         const del = document.createElement('button');
@@ -77,7 +82,9 @@ export class PlaylistBar {
         del.title = 'Delete current pattern';
         del.textContent = '×';
         del.addEventListener('click', () => {
+            this.engine.beginHistory();
             this.engine.deletePattern(this.engine.currentPatternIndex);
+            this.engine.commitHistory();
             this.render();
         });
         const loopBtn = document.createElement('button');
@@ -86,7 +93,9 @@ export class PlaylistBar {
         loopBtn.textContent = 'L';
         loopBtn.classList.toggle('active', this.engine.loopEnabled);
         loopBtn.addEventListener('click', () => {
+            this.engine.beginHistory();
             this.engine.toggleLoop();
+            this.engine.commitHistory();
             this.render();
         });
         const loopRange = document.createElement('span');
@@ -111,7 +120,9 @@ export class PlaylistBar {
             cell.addEventListener('click', () => this._onCellClick(bar));
             cell.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
+                this.engine.beginHistory();
                 this.engine.setPlaylistCell(bar, undefined);
+                this.engine.commitHistory();
                 this.render();
             });
             cells.appendChild(cell);
@@ -149,6 +160,7 @@ export class PlaylistBar {
     }
     _onCellClick(bar) {
         const cur = this.engine.playlist[bar];
+        this.engine.beginHistory();
         // Clicking the same assigned pattern clears it; otherwise assign current.
         if (cur === this.engine.currentPatternIndex) {
             this.engine.setPlaylistCell(bar, undefined);
@@ -156,6 +168,7 @@ export class PlaylistBar {
         else {
             this.engine.setPlaylistCell(bar, this.engine.currentPatternIndex);
         }
+        this.engine.commitHistory();
         this.render();
     }
     // Position the loop band/handles, refresh the range readout and dim cells
@@ -197,6 +210,7 @@ export class PlaylistBar {
         handle.addEventListener('pointerdown', (ev) => {
             ev.stopPropagation();
             handle.setPointerCapture(ev.pointerId);
+            this.engine.beginHistory();
             // Update engine fields in place and refresh visuals only — a full
             // render() here would rebuild the handles mid-drag and lose capture.
             const move = (me) => {
@@ -217,6 +231,7 @@ export class PlaylistBar {
                 handle.removeEventListener('pointercancel', up);
                 // Finalize + notify listeners (pattern change re-renders the strip).
                 this.engine.setLoopRegion(this.engine.loopStart, this.engine.loopEnd);
+                this.engine.commitHistory();
             };
             handle.addEventListener('pointermove', move);
             handle.addEventListener('pointerup', up);

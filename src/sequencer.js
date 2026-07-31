@@ -55,7 +55,9 @@ export class StepSequencer {
         this.currentStep = -1;
     }
     _onStepClick(trackIndex, stepIndex, btn) {
+        this.engine.beginHistory();
         this.engine.toggleStep(trackIndex, stepIndex);
+        this.engine.commitHistory();
         btn.classList.toggle('active', this.engine.tracks[trackIndex].pattern[stepIndex]);
     }
     _syncPlayState() {

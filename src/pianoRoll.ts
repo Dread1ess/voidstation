@@ -132,6 +132,8 @@ export class PianoRoll {
     const step = parseInt(cell.dataset.step!, 10);
     const grid = this.engine.tracks[this.activeTrackIndex].pianoGrid;
 
+    this.engine.beginHistory();
+
     if (grid[pitch][step] > 0) {
       // Note head: right-half click resizes, otherwise erase on mouseup.
       const cellRect = cell.getBoundingClientRect();
@@ -206,6 +208,7 @@ export class PianoRoll {
     }
 
     this._drag = null;
+    this.engine.commitHistory();
   }
 
   _onRightClick(e: MouseEvent) {
@@ -214,7 +217,9 @@ export class PianoRoll {
     const pitch = parseInt(cell.dataset.pitch!, 10);
     const step = parseInt(cell.dataset.step!, 10);
     if (this.engine.tracks[this.activeTrackIndex].pianoGrid[pitch][step] > 0) {
+      this.engine.beginHistory();
       this._eraseNote(pitch, step);
+      this.engine.commitHistory();
     }
   }
 

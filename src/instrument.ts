@@ -61,18 +61,32 @@ export class InstrumentPanel {
     };
 
     this._inputs.wave.addEventListener('change', () => {
+      this.engine.beginHistory();
       this.engine.tracks[this.trackIndex].synthType = this._inputs.wave.value as WaveformType;
+      this.engine.commitHistory();
       this._preview();
     });
 
     ADSR_KEYS.forEach((key) => {
       const input = this._inputs[key];
+      let gesture = false;
       input.addEventListener('input', () => {
         const v = parseFloat(input.value);
+        // Group the whole slider drag into a single undo entry.
+        if (!gesture) {
+          gesture = true;
+          this.engine.beginHistory();
+        }
         this.engine.tracks[this.trackIndex].adsr[key] = v;
         this._values[key].textContent = v.toFixed(3);
       });
-      input.addEventListener('change', () => this._preview());
+      input.addEventListener('change', () => {
+        if (gesture) {
+          gesture = false;
+          this.engine.commitHistory();
+        }
+        this._preview();
+      });
     });
 
     this.render();

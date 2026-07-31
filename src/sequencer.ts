@@ -68,7 +68,9 @@ export class StepSequencer {
   }
 
   _onStepClick(trackIndex: number, stepIndex: number, btn: HTMLButtonElement) {
+    this.engine.beginHistory();
     this.engine.toggleStep(trackIndex, stepIndex);
+    this.engine.commitHistory();
     btn.classList.toggle('active', this.engine.tracks[trackIndex].pattern[stepIndex]);
   }
 
