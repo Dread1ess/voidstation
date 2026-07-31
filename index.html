@@ -137,6 +137,49 @@
           <button class="mini-btn" data-solo title="Solo">S</button>
         </div>
       </div>
+
+      <!-- INSTRUMENT PANEL (synth controls for the active track) -->
+      <div class="instrument-panel" id="instrument-panel">
+        <div class="instrument-header">
+          <span class="instrument-title">INSTRUMENT</span>
+          <span class="instrument-name mono" id="instrument-name">Synth</span>
+        </div>
+
+        <label class="instr-row">
+          <span class="instr-label">WAVE</span>
+          <select class="instr-select mono" id="instr-wave">
+            <option value="sine">sine</option>
+            <option value="triangle">triangle</option>
+            <option value="square">square</option>
+            <option value="sawtooth">sawtooth</option>
+            <option value="noise">noise</option>
+          </select>
+        </label>
+
+        <label class="instr-row">
+          <span class="instr-label">ATTACK</span>
+          <input type="range" class="instr-slider" id="instr-attack" min="0.001" max="0.5" step="0.001" value="0.01">
+          <span class="instr-value mono" id="instr-attack-val">0.010</span>
+        </label>
+
+        <label class="instr-row">
+          <span class="instr-label">DECAY</span>
+          <input type="range" class="instr-slider" id="instr-decay" min="0.001" max="0.8" step="0.001" value="0.100">
+          <span class="instr-value mono" id="instr-decay-val">0.100</span>
+        </label>
+
+        <label class="instr-row">
+          <span class="instr-label">SUSTAIN</span>
+          <input type="range" class="instr-slider" id="instr-sustain" min="0" max="1" step="0.01" value="0.50">
+          <span class="instr-value mono" id="instr-sustain-val">0.50</span>
+        </label>
+
+        <label class="instr-row">
+          <span class="instr-label">RELEASE</span>
+          <input type="range" class="instr-slider" id="instr-release" min="0.02" max="1.5" step="0.01" value="0.10">
+          <span class="instr-value mono" id="instr-release-val">0.10</span>
+        </label>
+      </div>
     </aside>
 
     <!-- TIMELINE / PIANO ROLL -->
@@ -246,6 +289,7 @@
 <script src="src/audio/engine.js"></script>
 <script src="src/sequencer.js"></script>
 <script src="src/pianoRoll.js"></script>
+<script src="src/instrument.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>

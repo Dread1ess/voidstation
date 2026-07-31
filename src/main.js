@@ -6,6 +6,7 @@ const STORAGE_KEY = 'voidstation-project-v1';
 const engine = new window.AudioEngine();
 const sequencer = new window.StepSequencer(engine);
 const pianoRoll = new window.PianoRoll(engine);
+const instrument = new window.InstrumentPanel(engine);
 
 const fileInput = document.getElementById('file-input');
 const btnLoad = document.getElementById('btn-load');
@@ -30,6 +31,13 @@ const pianoGridEl = document.getElementById('piano-roll-grid');
 if (pianoGridEl) {
   pianoRoll.mount(pianoGridEl);
   pianoRoll.setActiveTrack(3); // Start with Synth track
+}
+
+// Initialize Instrument panel (synth controls)
+const instrumentEl = document.getElementById('instrument-panel');
+if (instrumentEl) {
+  instrument.mount(instrumentEl);
+  instrument.setTrack(3);
 }
 
 function syncButtons() {
@@ -60,6 +68,7 @@ function highlightCurrentTrack(trackIndex) {
   const channels = document.querySelectorAll('.channel');
   channels.forEach((ch, i) => ch.classList.toggle('selected', i === trackIndex));
   pianoRoll.setActiveTrack(trackIndex);
+  instrument.setTrack(trackIndex);
 }
 
 btnLoad.addEventListener('click', () => fileInput.click());
@@ -181,6 +190,9 @@ function refreshAllUI() {
   // Piano roll
   pianoRoll.render();
 
+  // Instrument panel
+  instrument.render();
+
   // Mixer faders + meters
   faders.forEach((f, i) => {
     const t = engine.tracks[i].volume;
@@ -248,6 +260,15 @@ btnNew.addEventListener('click', newProject);
 // Auto-load the saved project on startup
 openProject();
 
+// --- Channel click selects the track (piano roll + instrument panel) ---
+document.querySelectorAll('.channel').forEach((ch) => {
+  ch.addEventListener('click', () => {
+    const index = Array.from(document.querySelectorAll('.channel')).indexOf(ch);
+    highlightCurrentTrack(index);
+    setStatus(`Track: ${engine.tracks[index].name}`);
+  });
+});
+
 // --- Track selector via keyboard ---
 window.addEventListener('keydown', (e) => {
   const keys = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4 };
@@ -261,3 +282,4 @@ window.addEventListener('keydown', (e) => {
 window.engine = engine;
 window.sequencer = sequencer;
 window.pianoRoll = pianoRoll;
+window.instrument = instrument;

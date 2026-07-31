@@ -19,11 +19,11 @@ class AudioEngine {
 
     // Tracks: each track has sample, gain, pattern (16 steps), pianoGrid (24x16), mute/solo/volume
     this.tracks = [
-      { name: 'Kick',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine' },
-      { name: 'Snare',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise' },
-      { name: 'Bass',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth' },
-      { name: 'Synth',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square' },
-      { name: 'Pads',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle' },
+      { name: 'Kick',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 } },
+      { name: 'Snare',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 } },
+      { name: 'Bass',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 } },
+      { name: 'Synth',  sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 } },
+      { name: 'Pads',   sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 } },
     ];
     this.trackCount = 5;
     this._activeTrackCount = 5;
@@ -65,22 +65,48 @@ class AudioEngine {
     if (!track) return;
 
     const ctxTime = time !== null ? time : this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
+    const adsr = track.adsr || { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 };
+    const peak = 0.25;
+    const noteEnd = ctxTime + Math.max(0.05, duration);
+    const releaseStart = noteEnd;
+    const releaseEnd = releaseStart + Math.max(0.02, adsr.release);
+
+    let source;
+    if (track.synthType === 'noise') {
+      // White noise buffer (2s, cached per track)
+      if (!track._noiseBuffer) {
+        const len = this.ctx.sampleRate * 2;
+        const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        track._noiseBuffer = buf;
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = track._noiseBuffer;
+      src.loop = true;
+      source = src;
+    } else {
+      const osc = this.ctx.createOscillator();
+      osc.type = track.synthType || 'sawtooth';
+      osc.frequency.setValueAtTime(this.midiToFreq(midiNote), ctxTime);
+      source = osc;
+    }
+
     const env = this.ctx.createGain();
 
-    osc.type = track.synthType || 'sawtooth';
-    osc.frequency.setValueAtTime(this.midiToFreq(midiNote), ctxTime);
-
-    // Envelope (Attack - Release)
+    // ADSR envelope
     env.gain.setValueAtTime(0.0001, ctxTime);
-    env.gain.linearRampToValueAtTime(0.25, ctxTime + 0.01);
-    env.gain.exponentialRampToValueAtTime(0.0001, ctxTime + Math.max(0.05, duration));
+    env.gain.linearRampToValueAtTime(peak, ctxTime + Math.max(0.001, adsr.attack));
+    env.gain.linearRampToValueAtTime(peak * adsr.sustain, ctxTime + Math.max(0.001, adsr.attack) + Math.max(0.001, adsr.decay));
+    // Hold at sustain until note end, then release
+    env.gain.setValueAtTime(peak * adsr.sustain, releaseStart);
+    env.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
 
-    osc.connect(env);
+    source.connect(env);
     env.connect(track.gain);
 
-    osc.start(ctxTime);
-    osc.stop(ctxTime + Math.max(0.05, duration) + 0.05);
+    source.start(ctxTime);
+    source.stop(releaseEnd + 0.05);
   }
 
   get hasSample() {
@@ -325,6 +351,7 @@ class AudioEngine {
         mute: t.mute,
         solo: t.solo,
         synthType: t.synthType,
+        adsr: { ...t.adsr },
       })),
     };
   }
@@ -348,6 +375,14 @@ class AudioEngine {
       track.mute = !!saved.mute;
       track.solo = !!saved.solo;
       track.synthType = saved.synthType || 'sine';
+      if (saved.adsr && typeof saved.adsr === 'object') {
+        track.adsr = {
+          attack: saved.adsr.attack !== undefined ? saved.adsr.attack : track.adsr.attack,
+          decay: saved.adsr.decay !== undefined ? saved.adsr.decay : track.adsr.decay,
+          sustain: saved.adsr.sustain !== undefined ? saved.adsr.sustain : track.adsr.sustain,
+          release: saved.adsr.release !== undefined ? saved.adsr.release : track.adsr.release,
+        };
+      }
       if (Array.isArray(saved.pianoGrid)) {
         for (let p = 0; p < 24; p++) {
           for (let s = 0; s < 16; s++) {
@@ -393,6 +428,7 @@ class AudioEngine {
       ][i];
       t.name = defaults.name;
       t.synthType = defaults.synthType;
+      t.adsr = { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 };
       t.sample = null;
       t.sampleData = null;
       t.sampleName = null;
