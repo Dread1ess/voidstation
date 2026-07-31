@@ -2,6 +2,7 @@
 // ESM module — imports every other module explicitly; loaded from index.html
 // as the single runtime entry (app.js stays a classic script for static UI).
 import { AudioEngine } from './audio/engine.js';
+import { audioBufferToWav } from './audio/wav.js';
 import { StepSequencer } from './sequencer.js';
 import { PianoRoll } from './pianoRoll.js';
 import { InstrumentPanel } from './instrument.js';
@@ -20,6 +21,7 @@ const btnRec = document.getElementById('btn-rec');
 const btnSave = document.getElementById('btn-save');
 const btnOpen = document.getElementById('btn-open');
 const btnNew = document.getElementById('btn-new');
+const btnExport = document.getElementById('btn-export');
 const bpmInput = document.querySelector('#bpm-input');
 const sampleName = document.getElementById('sample-name');
 const dropOverlay = document.getElementById('drop-overlay');
@@ -256,6 +258,39 @@ function newProject() {
 btnSave.addEventListener('click', saveProject);
 btnOpen.addEventListener('click', openProject);
 btnNew.addEventListener('click', newProject);
+// --- WAV export (offline render) ---
+btnExport.addEventListener('click', async () => {
+    if (btnExport.classList.contains('busy'))
+        return;
+    if (!engine.hasContent) {
+        setStatus('nothing to export yet', true);
+        return;
+    }
+    btnExport.classList.add('busy');
+    btnExport.disabled = true;
+    const originalLabel = btnExport.textContent;
+    btnExport.textContent = 'RENDERING…';
+    try {
+        const buffer = await engine.offlineRender();
+        const blob = audioBufferToWav(buffer);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'voidstation-export.wav';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        setStatus(`exported ${blob.size} bytes`);
+    }
+    catch (err) {
+        console.error('Export failed:', err);
+        setStatus('export failed', true);
+    }
+    finally {
+        btnExport.classList.remove('busy');
+        btnExport.disabled = false;
+        btnExport.textContent = originalLabel;
+    }
+});
 // Auto-load the saved project on startup
 openProject();
 // --- Channel click selects the track (piano roll + instrument panel) ---
@@ -279,3 +314,4 @@ window.pianoRoll = pianoRoll;
 window.instrument = instrument;
 window.playlist = playlist;
 window.openProject = openProject;
+window.audioBufferToWav = audioBufferToWav;

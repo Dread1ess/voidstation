@@ -131,15 +131,24 @@ export class AudioEngine {
     return this.playlist.length;
   }
 
+  // Data source for a track at a given bar while following the playlist.
+  // Empty playlist => the live (active) pattern.
+  _stepSourceForBar(trackIndex: number, bar: number): PatternTrackData | null {
+    if (this.playlist.length > 0) {
+      const patIdx = this.playlist[bar % this.playlist.length];
+      const pat = patIdx !== undefined ? this.patterns[patIdx] : null;
+      if (pat && pat.tracks[trackIndex]) return pat.tracks[trackIndex];
+      return null; // empty arrangement slot -> silence
+    }
+    return this.tracks[trackIndex]; // live references == current pattern
+  }
+
   // Data source for a track while scheduling. Follows the playlist when an
   // arrangement is set; otherwise falls back to the live (active) pattern.
   _stepSourceFor(trackIndex: number): PatternTrackData | null {
     if (this.playlist.length > 0 && this.isPlaying) {
       const bar = Math.floor(this.totalSteps / this.stepsPerBar);
-      const patIdx = this.playlist[bar % this.playlist.length];
-      const pat = patIdx !== undefined ? this.patterns[patIdx] : null;
-      if (pat && pat.tracks[trackIndex]) return pat.tracks[trackIndex];
-      return null; // empty arrangement slot -> silence
+      return this._stepSourceForBar(trackIndex, bar);
     }
     return this.tracks[trackIndex]; // live references == current pattern
   }
@@ -176,11 +185,24 @@ export class AudioEngine {
     if (!ctx) return;
     const track = this.tracks[trackIndex];
     if (!track || !track.gain) return;
-
     const ctxTime = time !== null ? time : ctx.currentTime;
+    this._buildSynthVoice(ctx, track, track.gain, midiNote, ctxTime, duration);
+  }
+
+  // Build a synth voice (oscillator / noise + ADSR envelope) in the given
+  // context and connect it to destGain. Shared by live playback and the
+  // offline renderer so exported audio matches what's heard.
+  private _buildSynthVoice(
+    ctx: BaseAudioContext,
+    track: Track,
+    destGain: GainNode,
+    midiNote: number,
+    time: number,
+    duration: number
+  ) {
     const adsr: AdsrParams = track.adsr;
     const peak = 0.25;
-    const noteEnd = ctxTime + Math.max(0.05, duration);
+    const noteEnd = time + Math.max(0.05, duration);
     const releaseStart = noteEnd;
     const releaseEnd = releaseStart + Math.max(0.02, adsr.release);
 
@@ -188,7 +210,7 @@ export class AudioEngine {
     if (track.synthType === 'noise') {
       // White noise buffer (2s, cached per track)
       if (!track.noiseBuffer) {
-        const len = ctx.sampleRate * 2;
+        const len = Math.round(ctx.sampleRate * 2);
         const buf = ctx.createBuffer(1, len, ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
@@ -201,24 +223,24 @@ export class AudioEngine {
     } else {
       const osc = ctx.createOscillator();
       osc.type = track.synthType; // narrowed to OscillatorType-compatible waveforms
-      osc.frequency.setValueAtTime(this.midiToFreq(midiNote), ctxTime);
+      osc.frequency.setValueAtTime(this.midiToFreq(midiNote), time);
       source = osc;
     }
 
     const env = ctx.createGain();
 
     // ADSR envelope
-    env.gain.setValueAtTime(0.0001, ctxTime);
-    env.gain.linearRampToValueAtTime(peak, ctxTime + Math.max(0.001, adsr.attack));
-    env.gain.linearRampToValueAtTime(peak * adsr.sustain, ctxTime + Math.max(0.001, adsr.attack) + Math.max(0.001, adsr.decay));
+    env.gain.setValueAtTime(0.0001, time);
+    env.gain.linearRampToValueAtTime(peak, time + Math.max(0.001, adsr.attack));
+    env.gain.linearRampToValueAtTime(peak * adsr.sustain, time + Math.max(0.001, adsr.attack) + Math.max(0.001, adsr.decay));
     // Hold at sustain until note end, then release
     env.gain.setValueAtTime(peak * adsr.sustain, releaseStart);
     env.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
 
     source.connect(env);
-    env.connect(track.gain);
+    env.connect(destGain);
 
-    source.start(ctxTime);
+    source.start(time);
     source.stop(releaseEnd + 0.05);
   }
 
@@ -297,15 +319,22 @@ export class AudioEngine {
     }
   }
 
-  // Rebuild a track's effective gain considering volume + mute + solo
-  _rebuildGain(trackIndex: number) {
+  // Effective per-track gain: volume, scaled by mute/solo routing.
+  private _effectiveVolume(trackIndex: number): number {
     const track = this.tracks[trackIndex];
-    if (!track || !track.gain) return;
+    if (!track) return 0;
     const anySolo = this.tracks.some(t => t.solo);
     let effective = track.volume;
     if (anySolo && !track.solo) effective = 0;
     if (track.mute) effective = 0;
-    track.gain.gain.value = effective;
+    return effective;
+  }
+
+  // Rebuild a track's effective gain considering volume + mute + solo
+  _rebuildGain(trackIndex: number) {
+    const track = this.tracks[trackIndex];
+    if (!track || !track.gain) return;
+    track.gain.gain.value = this._effectiveVolume(trackIndex);
   }
 
   // Global solo refresh (call after any toggleMute/toggleSolo)
@@ -435,6 +464,66 @@ export class AudioEngine {
   // Stop everything (transport + any one-shots)
   stop() {
     this.stopTransport();
+  }
+
+  // Render the current playlist (or the active pattern when the playlist is
+  // empty) to an AudioBuffer using an OfflineAudioContext. Mirrors the live
+  // node chain: ADSR synth voices / sample buffer sources -> track faders
+  // (volume + mute/solo) -> master. Renders faster than real time.
+  async offlineRender(): Promise<AudioBuffer> {
+    this._updateStepDuration();
+    const sampleRate = this.ctx?.sampleRate || 44100;
+    const barCount = this.playlist.length > 0 ? this.playlist.length : 1;
+    const totalSteps = barCount * this.stepsPerBar;
+    const tail = Math.max(0.1, ...this.tracks.map(t => t.adsr.release)) + 0.1;
+    const totalSeconds = totalSteps * this.stepDuration + tail;
+    const lengthFrames = Math.ceil(totalSeconds * sampleRate);
+
+    const offline = new OfflineAudioContext(2, lengthFrames, sampleRate);
+
+    const master = offline.createGain();
+    master.gain.value = 0.8;
+    master.connect(offline.destination);
+
+    const trackGains: GainNode[] = this.tracks.map((_, i) => {
+      const g = offline.createGain();
+      g.gain.value = this._effectiveVolume(i);
+      g.connect(master);
+      return g;
+    });
+
+    for (let bar = 0; bar < barCount; bar++) {
+      for (let step = 0; step < this.stepsPerBar; step++) {
+        const time = (bar * this.stepsPerBar + step) * this.stepDuration;
+        this.tracks.forEach((track, ti) => {
+          const gain = trackGains[ti];
+          if (!gain || gain.gain.value <= 0) return; // muted / soloed-out / zero volume
+          const srcData = this._stepSourceForBar(ti, bar);
+          if (!srcData) return; // empty playlist slot -> silence
+          // 1) Sample playback (if sample loaded and pattern step active)
+          if (track.sample && srcData.pattern[step]) {
+            const src = offline.createBufferSource();
+            src.buffer = track.sample;
+            src.connect(gain);
+            src.start(time);
+          }
+          // 2) Synth note playback (if piano grid has notes on this step)
+          if (srcData.pianoGrid) {
+            for (let pitch = 0; pitch < 24; pitch++) {
+              const lengthSteps = srcData.pianoGrid[pitch][step];
+              if (lengthSteps) {
+                // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
+                const midi = 71 - pitch;
+                const noteDuration = this.stepDuration * lengthSteps * 0.85;
+                this._buildSynthVoice(offline, track, gain, midi, time, noteDuration);
+              }
+            }
+          }
+        });
+      }
+    }
+
+    return offline.startRendering();
   }
 
   // --- Project serialization (localStorage) ---
