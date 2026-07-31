@@ -53,6 +53,12 @@ export class AudioEngine {
   ];
   currentPatternIndex = 0;
   playlist: (number | undefined)[] = []; // bar index -> pattern index; [] = play active pattern
+  // Loop region (in bars). Playback and offline export wrap within
+  // [loopStart, loopEnd). loopEnd = 0 means "auto: the whole playlist",
+  // so an untouched project keeps the legacy wrap-everything behaviour.
+  loopStart = 0;
+  loopEnd = 0;
+  loopEnabled = true;
 
   constructor() {
     this._loadPatternIntoLive(0);
@@ -123,7 +129,36 @@ export class AudioEngine {
       delete this.playlist[bar];
     } else if (this.patterns[patternIndex]) {
       this.playlist[bar] = patternIndex;
+      // Assigning a clip beyond the loop point extends the loop (FL-style).
+      if (this.loopEnabled && bar + 1 > this.loopEnd) this.loopEnd = bar + 1;
     }
+    this._notifyPatternChange();
+  }
+
+  // Effective loop end: explicit loopEnd, or the whole playlist when the
+  // region is untouched (loopEnd <= loopStart).
+  _effectiveLoopEnd(): number {
+    return this.loopEnd > this.loopStart ? this.loopEnd : Math.max(0, this.playlist.length);
+  }
+
+  // Map an absolute bar counter to the bar that actually plays, honoring the
+  // loop region. Playback starts at loopStart, wraps within [loopStart, end).
+  // When looping is disabled the whole playlist is played straight through.
+  _barInLoop(absBar: number): number {
+    const base = this.loopEnabled ? this.loopStart : 0;
+    const end = this.loopEnabled ? this._effectiveLoopEnd() : this.playlist.length;
+    const len = Math.max(1, end - base);
+    return base + ((absBar % len) + len) % len;
+  }
+
+  setLoopRegion(start: number, end: number) {
+    this.loopStart = Math.max(0, Math.min(start, Math.max(0, end - 1)));
+    this.loopEnd = Math.max(this.loopStart + 1, end);
+    this._notifyPatternChange();
+  }
+
+  toggleLoop() {
+    this.loopEnabled = !this.loopEnabled;
     this._notifyPatternChange();
   }
 
@@ -135,7 +170,7 @@ export class AudioEngine {
   // Empty playlist => the live (active) pattern.
   _stepSourceForBar(trackIndex: number, bar: number): PatternTrackData | null {
     if (this.playlist.length > 0) {
-      const patIdx = this.playlist[bar % this.playlist.length];
+      const patIdx = this.playlist[bar];
       const pat = patIdx !== undefined ? this.patterns[patIdx] : null;
       if (pat && pat.tracks[trackIndex]) return pat.tracks[trackIndex];
       return null; // empty arrangement slot -> silence
@@ -143,12 +178,13 @@ export class AudioEngine {
     return this.tracks[trackIndex]; // live references == current pattern
   }
 
-  // Data source for a track while scheduling. Follows the playlist when an
-  // arrangement is set; otherwise falls back to the live (active) pattern.
+  // Data source for a track while scheduling. Follows the playlist (loop
+  // region aware) when an arrangement is set; otherwise falls back to the
+  // live (active) pattern.
   _stepSourceFor(trackIndex: number): PatternTrackData | null {
     if (this.playlist.length > 0 && this.isPlaying) {
-      const bar = Math.floor(this.totalSteps / this.stepsPerBar);
-      return this._stepSourceForBar(trackIndex, bar);
+      const absBar = Math.floor(this.totalSteps / this.stepsPerBar);
+      return this._stepSourceForBar(trackIndex, this._barInLoop(absBar));
     }
     return this.tracks[trackIndex]; // live references == current pattern
   }
@@ -466,14 +502,18 @@ export class AudioEngine {
     this.stopTransport();
   }
 
-  // Render the current playlist (or the active pattern when the playlist is
-  // empty) to an AudioBuffer using an OfflineAudioContext. Mirrors the live
-  // node chain: ADSR synth voices / sample buffer sources -> track faders
-  // (volume + mute/solo) -> master. Renders faster than real time.
+  // Render the current loop region (or the active pattern when the playlist
+  // is empty) to an AudioBuffer using an OfflineAudioContext. Mirrors the
+  // live node chain: ADSR synth voices / sample buffer sources -> track
+  // faders (volume + mute/solo) -> master. Renders faster than real time.
   async offlineRender(): Promise<AudioBuffer> {
     this._updateStepDuration();
     const sampleRate = this.ctx?.sampleRate || 44100;
-    const barCount = this.playlist.length > 0 ? this.playlist.length : 1;
+    const hasPlaylist = this.playlist.length > 0;
+    const barOffset = hasPlaylist && this.loopEnabled ? this.loopStart : 0;
+    const barCount = hasPlaylist
+      ? (this.loopEnabled ? this._effectiveLoopEnd() - this.loopStart : this.playlist.length)
+      : 1;
     const totalSteps = barCount * this.stepsPerBar;
     const tail = Math.max(0.1, ...this.tracks.map(t => t.adsr.release)) + 0.1;
     const totalSeconds = totalSteps * this.stepDuration + tail;
@@ -492,9 +532,10 @@ export class AudioEngine {
       return g;
     });
 
-    for (let bar = 0; bar < barCount; bar++) {
+    for (let barIdx = 0; barIdx < barCount; barIdx++) {
+      const bar = barOffset + barIdx;
       for (let step = 0; step < this.stepsPerBar; step++) {
-        const time = (bar * this.stepsPerBar + step) * this.stepDuration;
+        const time = (barIdx * this.stepsPerBar + step) * this.stepDuration;
         this.tracks.forEach((track, ti) => {
           const gain = trackGains[ti];
           if (!gain || gain.gain.value <= 0) return; // muted / soloed-out / zero volume
@@ -579,6 +620,9 @@ export class AudioEngine {
       })),
       currentPatternIndex: this.currentPatternIndex,
       playlist: [...this.playlist],
+      loopStart: this.loopStart,
+      loopEnd: this.loopEnd,
+      loopEnabled: this.loopEnabled,
       patterns: this.patterns.map((p) => ({
         name: p.name,
         tracks: p.tracks.map((t) => ({
@@ -627,6 +671,12 @@ export class AudioEngine {
     this.playlist = Array.isArray(state.playlist)
       ? state.playlist.map(v => (typeof v === 'number' && v >= 0 && v < this.patterns.length ? v : undefined))
       : [];
+    this.loopStart = Math.max(0, state.loopStart ?? 0);
+    this.loopEnd = Math.max(0, state.loopEnd ?? 0);
+    this.loopEnabled = state.loopEnabled ?? true;
+    if (this.loopEnd > this.loopStart) {
+      this.loopStart = Math.min(this.loopStart, Math.max(0, this.loopEnd - 1));
+    }
 
     this._loadPatternIntoLive(this.currentPatternIndex);
 
@@ -702,6 +752,9 @@ export class AudioEngine {
     }];
     this.currentPatternIndex = 0;
     this.playlist = [];
+    this.loopStart = 0;
+    this.loopEnd = 0;
+    this.loopEnabled = true;
     this._loadPatternIntoLive(0);
     this._rebuildAllGains();
     this._notifyStateChange();

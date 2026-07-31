@@ -91,4 +91,8 @@ export interface ProjectState {
   currentPatternIndex: number;
   playlist: (number | undefined)[];
   patterns: Pattern[];
+  // Loop region (in bars) — optional so older saved projects still load.
+  loopStart?: number;
+  loopEnd?: number;
+  loopEnabled?: boolean;
 }
