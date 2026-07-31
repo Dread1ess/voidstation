@@ -50,10 +50,39 @@ if (playlistEl) {
 engine.onPatternChange(() => {
     sequencer.render();
     pianoRoll.render();
+    syncEditorTabName();
 });
+// Keep the editor tab label in sync with pattern renames
+playlist.onNameChange = (name) => { updateEditorTabName(name); syncStatusBar(); };
+function updateEditorTabName(name) {
+    const tabName = document.getElementById('tab-pattern-name');
+    if (tabName)
+        tabName.textContent = name;
+    const treeName = document.getElementById('tree-current-pattern');
+    if (treeName)
+        treeName.textContent = name;
+}
+function syncEditorTabName() {
+    const pat = engine.patterns[engine.currentPatternIndex];
+    if (pat)
+        updateEditorTabName(pat.name);
+}
+function syncStatusBar() {
+    const bpmItem = document.getElementById('status-bpm');
+    if (bpmItem)
+        bpmItem.textContent = `BPM: ${engine.bpm.toFixed(2)}`;
+    const patItem = document.getElementById('status-pattern');
+    const pat = engine.patterns[engine.currentPatternIndex];
+    if (patItem && pat)
+        patItem.textContent = `${pat.name}.pattern`;
+    const transportItem = document.getElementById('status-transport');
+    if (transportItem)
+        transportItem.textContent = engine.isPlaying ? 'Playing' : 'Stopped';
+}
 function syncButtons() {
     btnPlay.classList.toggle('active', engine.isPlaying);
     btnStop.classList.toggle('active', !engine.isPlaying);
+    syncStatusBar();
 }
 function setStatus(message, isError = false) {
     sampleName.textContent = message;
@@ -502,6 +531,8 @@ function refreshAllUI() {
     updateFxButtons();
     if (fxPanel && !fxPanel.hidden)
         renderFxList();
+    syncEditorTabName();
+    syncStatusBar();
 }
 // --- Project save / load (localStorage) ---
 function saveProject() {
@@ -586,10 +617,164 @@ channels.forEach((ch, i) => {
         setStatus(`Track: ${engine.tracks[i].name}`);
     });
 });
+// ============================================================
+// VS Code style chrome: activity bar, sidebar, bottom panel,
+// command palette
+// ============================================================
+const activityBar = document.getElementById('activity-bar');
+const sidebar = document.getElementById('sidebar');
+const sidebarSections = Array.from(document.querySelectorAll('.sidebar-section'));
+const bottomPanel = document.getElementById('bottom-panel');
+const bottomTabs = Array.from(document.querySelectorAll('.bt-tab'));
+const palette = document.getElementById('palette');
+const paletteInput = document.querySelector('#palette-input');
+const paletteList = document.getElementById('palette-list');
+function showSidebarSection(name) {
+    activityBar?.querySelectorAll('.act-btn').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-activity') === name);
+    });
+    sidebarSections.forEach((sec) => {
+        sec.classList.toggle('hidden', sec.getAttribute('data-section') !== name);
+    });
+    sidebar?.classList.remove('hidden');
+}
+function showBottomTab(name) {
+    if (!bottomPanel)
+        return;
+    bottomTabs.forEach((b) => b.classList.toggle('active', b.getAttribute('data-btab') === name));
+    bottomPanel.querySelectorAll('[data-btab]').forEach((el) => {
+        el.hidden = el.getAttribute('data-btab') !== name;
+    });
+}
+activityBar?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.act-btn');
+    if (!btn)
+        return;
+    const name = btn.getAttribute('data-activity');
+    if (!name)
+        return;
+    if (btn.classList.contains('active') && !sidebar?.classList.contains('hidden')) {
+        sidebar?.classList.add('hidden');
+        btn.classList.remove('active');
+        return;
+    }
+    showSidebarSection(name);
+});
+const btnSidebarClose = document.getElementById('btn-sidebar-close');
+btnSidebarClose?.addEventListener('click', () => {
+    sidebar?.classList.add('hidden');
+    activityBar?.querySelectorAll('.act-btn').forEach((b) => b.classList.remove('active'));
+});
+bottomTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+        const name = tab.getAttribute('data-btab');
+        if (!name)
+            return;
+        showBottomTab(name);
+    });
+});
+const btnBottomClose = document.getElementById('btn-bottom-close');
+btnBottomClose?.addEventListener('click', () => bottomPanel?.classList.add('hidden'));
+const paletteCommands = [
+    { title: 'Play / Stop', kbd: 'Space', run: () => { engine.isPlaying ? engine.stop() : engine.startTransport(); syncButtons(); } },
+    { title: 'New Project', kbd: '', run: () => btnNew.click() },
+    { title: 'Open Project', kbd: '', run: () => btnOpen.click() },
+    { title: 'Save Project', kbd: '', run: () => btnSave.click() },
+    { title: 'Export WAV', kbd: '', run: () => btnExport.click() },
+    { title: 'Load Sample', kbd: '', run: () => fileInput.click() },
+    { title: 'Toggle Sidebar', kbd: 'Ctrl+B', run: () => sidebar?.classList.toggle('hidden') },
+    { title: 'Toggle Bottom Panel', kbd: 'Ctrl+J', run: () => bottomPanel?.classList.toggle('hidden') },
+    { title: 'View: Explorer', kbd: 'Ctrl+Shift+E', run: () => showSidebarSection('explorer') },
+    { title: 'View: Tracks', kbd: 'Ctrl+Shift+T', run: () => showSidebarSection('tracks') },
+    { title: 'View: Source Control', kbd: 'Ctrl+Shift+G', run: () => showSidebarSection('git') },
+    { title: 'View: Audio FX', kbd: 'Ctrl+Shift+X', run: () => showSidebarSection('fx') },
+];
+function openPalette() {
+    if (!palette)
+        return;
+    palette.hidden = false;
+    paletteInput?.focus();
+    renderPalette(paletteCommands);
+}
+function closePalette() {
+    if (palette)
+        palette.hidden = true;
+}
+function renderPalette(cmds) {
+    if (!paletteList)
+        return;
+    paletteList.innerHTML = '';
+    if (cmds.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'palette-empty';
+        empty.textContent = 'No matching commands';
+        paletteList.appendChild(empty);
+        return;
+    }
+    cmds.forEach((cmd) => {
+        const item = document.createElement('div');
+        item.className = 'palette-item';
+        const label = document.createElement('span');
+        label.textContent = cmd.title;
+        const kbd = document.createElement('span');
+        kbd.className = 'kbd';
+        kbd.textContent = cmd.kbd;
+        item.append(label, kbd);
+        item.addEventListener('click', () => {
+            closePalette();
+            cmd.run();
+        });
+        paletteList.appendChild(item);
+    });
+}
+paletteInput?.addEventListener('input', () => {
+    const q = paletteInput.value.trim().toLowerCase();
+    if (!q) {
+        renderPalette(paletteCommands);
+        return;
+    }
+    renderPalette(paletteCommands.filter((c) => c.title.toLowerCase().includes(q)));
+});
+paletteInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const sel = paletteList?.querySelector('.palette-item');
+        sel?.click();
+    }
+    if (e.key === 'Escape')
+        closePalette();
+});
+palette?.addEventListener('pointerdown', (e) => {
+    if (e.target === palette)
+        closePalette();
+});
+// Clicking an editor tab selects the single pattern editor (placeholder for now)
+const editorTab = document.querySelector('.editor-tab');
+editorTab?.addEventListener('click', () => {
+    document.querySelectorAll('.editor-tab').forEach((t) => t.classList.remove('active'));
+    editorTab.classList.add('active');
+});
 // --- Keyboard shortcuts ---
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape')
+    if (e.key === 'Escape') {
         closeFxPanel();
+        closePalette();
+    }
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        openPalette();
+        return;
+    }
+    if (mod && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        sidebar?.classList.toggle('hidden');
+        return;
+    }
+    if (mod && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        bottomPanel?.classList.toggle('hidden');
+        return;
+    }
     // Let text/number fields handle their own keys (native undo inside inputs).
     const target = e.target;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA'))
@@ -599,7 +784,6 @@ window.addEventListener('keydown', (e) => {
         highlightCurrentTrack(keys[e.key]);
         setStatus(`Track: ${engine.tracks[keys[e.key]].name}`);
     }
-    const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) {

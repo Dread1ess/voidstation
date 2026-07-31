@@ -24,6 +24,8 @@ export class PlaylistBar {
         this._lastDragAt = 0;
         this._dragClip = null;
         this._dragThreshold = 8; // px of movement before a drag starts
+        // Optional callback fired when the current pattern is renamed.
+        this.onNameChange = null;
         this.engine = engine;
     }
     mount(container) {
@@ -76,6 +78,8 @@ export class PlaylistBar {
             this.engine.patterns[this.engine.currentPatternIndex].name = next;
             this.engine.commitHistory();
             name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
+            if (this.onNameChange)
+                this.onNameChange(name.value);
             this.render();
         });
         const count = document.createElement('span');

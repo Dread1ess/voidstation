@@ -11,61 +11,108 @@
 <body>
 <div class="app">
 
-  <!-- ============ TRANSPORT ============ -->
-  <header class="transport">
-    <div class="t-group t-brand">
-      <div class="brand-mark"><span class="brand-glyph"></span></div>
-      <div class="brand-text">
-        <span class="brand-name">VOIDSTATION</span>
-        <span class="brand-project">untitled.flp</span>
+  <!-- ============ TITLE / MENU BAR ============ -->
+  <header class="titlebar">
+    <div class="titlebar-left">
+      <span class="titlebar-brand">VOIDSTATION</span>
+      <nav class="menu-items">
+        <span class="menu-item" data-menu="file">File</span>
+        <span class="menu-item" data-menu="edit">Edit</span>
+        <span class="menu-item" data-menu="selection">Selection</span>
+        <span class="menu-item" data-menu="view">View</span>
+        <span class="menu-item" data-menu="help">Help</span>
+      </nav>
+    </div>
+
+    <div class="titlebar-center">
+      <div class="t-group t-controls">
+        <button class="btn btn-icon" id="btn-play" title="Play">
+          <svg width="12" height="14" viewBox="0 0 12 14"><path d="M0 0 L12 7 L0 14 Z" fill="currentColor"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btn-stop" title="Stop">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect width="12" height="12" rx="1.5" fill="currentColor"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btn-rec" title="Record">
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <div class="t-group t-sample">
+        <button class="btn btn-icon" id="btn-load" title="Load audio sample">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v7m0 0L4 6m3 3l3-3M2 10v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1"/></svg>
+        </button>
+        <span class="sample-name mono" id="sample-name">no sample</span>
+      </div>
+      <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.ogg,.flac,.aiff" hidden>
+
+      <div class="t-group t-project">
+        <button class="btn" id="btn-save" title="Save project to localStorage">SAVE</button>
+        <button class="btn" id="btn-open" title="Load project from localStorage">OPEN</button>
+        <button class="btn" id="btn-new" title="Clear project">NEW</button>
+        <button class="btn" id="btn-export" title="Render the current playlist/pattern to a WAV file">EXPORT WAV</button>
       </div>
     </div>
 
-    <div class="t-group t-controls">
-      <button class="btn btn-icon" id="btn-play" title="Play">
-        <svg width="12" height="14" viewBox="0 0 12 14"><path d="M0 0 L12 7 L0 14 Z" fill="currentColor"/></svg>
-      </button>
-      <button class="btn btn-icon" id="btn-stop" title="Stop">
-        <svg width="12" height="12" viewBox="0 0 12 12"><rect width="12" height="12" rx="1.5" fill="currentColor"/></svg>
-      </button>
-      <button class="btn btn-icon" id="btn-rec" title="Record">
-        <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor"/></svg>
-      </button>
-    </div>
-
-    <div class="t-group t-sample">
-      <button class="btn btn-icon" id="btn-load" title="Load audio sample">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v7m0 0L4 6m3 3l3-3M2 10v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1"/></svg>
-      </button>
-      <span class="sample-name mono" id="sample-name">no sample</span>
-    </div>
-    <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.ogg,.flac,.aiff" hidden>
-
-    <div class="t-group t-project">
-      <button class="btn" id="btn-save" title="Save project to localStorage">SAVE</button>
-      <button class="btn" id="btn-open" title="Load project from localStorage">OPEN</button>
-      <button class="btn" id="btn-new" title="Clear project">NEW</button>
-      <button class="btn" id="btn-export" title="Render the current playlist/pattern to a WAV file">EXPORT WAV</button>
-    </div>
-
-    <div class="t-group t-readouts">
-      <div class="readout">
-        <span class="readout-label">BPM</span>
-        <input type="number" class="readout-value mono bpm-input" id="bpm-input" value="124.000" step="0.5" min="20" max="300" inputmode="decimal" title="Tempo (beats per minute)">
-      </div>
-      <div class="readout">
-        <span class="readout-label">TIME</span>
-        <span class="readout-value mono">00:01:32.5</span>
+    <div class="titlebar-right">
+      <div class="t-group t-readouts">
+        <div class="readout">
+          <span class="readout-label">BPM</span>
+          <input type="number" class="readout-value mono bpm-input" id="bpm-input" value="124.000" step="0.5" min="20" max="300" inputmode="decimal" title="Tempo (beats per minute)">
+        </div>
+        <div class="readout">
+          <span class="readout-label">TIME</span>
+          <span class="readout-value mono">00:01:32.5</span>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- ============ WORK AREA ============ -->
-  <main class="workarea">
+  <!-- ============ IDE BODY ============ -->
+  <div class="ide-body">
 
-    <!-- TRACK LIST -->
-    <aside class="tracklist">
-      <div class="tracklist-header">Tracks</div>
+    <!-- ACTIVITY BAR -->
+    <nav class="activity-bar" id="activity-bar">
+      <button class="act-btn active" data-activity="explorer" title="Explorer (Ctrl+Shift+E)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-4h7l7 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M14 3v5h5"/></svg>
+      </button>
+      <button class="act-btn" data-activity="tracks" title="Tracks (Ctrl+Shift+T)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <button class="act-btn" data-activity="git" title="Source Control (Ctrl+Shift+G)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 9v6M18 9v3h-7"/></svg>
+      </button>
+      <button class="act-btn" data-activity="fx" title="Audio FX (Ctrl+Shift+X)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+      </button>
+    </nav>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- EXPLORER / PATTERNS -->
+      <div class="sidebar-section" data-section="explorer">
+        <div class="section-header">
+          <span>EXPLORER</span>
+          <button class="mini-btn" id="btn-sidebar-close" title="Close sidebar">×</button>
+        </div>
+        <div class="tree-block">
+          <div class="tree-title">PROJECT</div>
+          <div class="tree-item tree-folder"><span>▾</span> samples/</div>
+          <div class="tree-item tree-folder"><span>▾</span> patterns/</div>
+          <div class="tree-item tree-file selected"><span class="tree-color-accent">▸</span> <span class="tree-name" id="tree-current-pattern">pattern_1.pattern</span></div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">drums.sequence</span></div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">master_bus.mixer</span></div>
+        </div>
+        <div class="tree-block">
+          <div class="tree-title">SAMPLE CACHE</div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">(drag audio here)</span></div>
+        </div>
+      </div>
+
+      <!-- TRACKS (list + instrument) -->
+      <div class="sidebar-section" data-section="tracks">
+        <div class="section-header"><span>TRACKS</span></div>
+        <div class="tracklist">
 
       <div class="track-row" data-color="#6b4550">
         <div class="track-plate" style="background:#6b4550"></div>
@@ -181,7 +228,40 @@
           <span class="instr-value mono" id="instr-release-val">0.10</span>
         </label>
       </div>
+        </div>
+      </div>
+
+      <!-- SOURCE CONTROL -->
+      <div class="sidebar-section" data-section="git">
+        <div class="section-header"><span>SOURCE CONTROL</span></div>
+        <div class="tree-block">
+          <div class="tree-title">CHANGES</div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">pattern_1.pattern</span></div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">master_bus.mixer</span></div>
+        </div>
+        <div class="tree-block">
+          <div class="tree-title">OUTPUT</div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">no commits yet</span></div>
+        </div>
+      </div>
+
+      <!-- AUDIO FX -->
+      <div class="sidebar-section" data-section="fx">
+        <div class="section-header"><span>AUDIO FX</span></div>
+        <div class="tree-block">
+          <div class="tree-title">WEB AUDIO NODES</div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">Reverb · ConvolverNode</span></div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">Delay · DelayNode</span></div>
+          <div class="tree-item tree-file"><span>▸</span> <span class="tree-name">EQ · BiquadFilterNode</span></div>
+        </div>
+      </div>
     </aside>
+
+    <!-- WORKSPACE -->
+    <main class="workspace">
+      <div class="editor-tabs">
+        <div class="editor-tab active" id="tab-pattern"><span id="tab-pattern-name">pattern_1.pattern</span></div>
+      </div>
 
     <!-- TIMELINE / PIANO ROLL -->
     <section class="timeline">
@@ -204,10 +284,19 @@
         </div>
       </div>
     </section>
-  </main>
+    </main>
+  </div>
 
-  <!-- ============ MIXER ============ -->
-  <footer class="mixer">
+  <!-- ============ BOTTOM PANEL ============ -->
+  <section class="bottom-panel" id="bottom-panel">
+    <div class="bottom-tabs">
+      <button class="bt-tab active" data-btab="mixer">Mixer</button>
+      <button class="bt-tab" data-btab="output">Output</button>
+      <button class="mini-btn bt-close" id="btn-bottom-close" title="Close panel (Ctrl+J)">×</button>
+    </div>
+
+    <!-- ============ MIXER ============ -->
+    <footer class="mixer" id="mixer" data-btab="mixer">
     <div class="mixer-label">MIXER</div>
 
     <div class="channel selected" data-name="Kick">
@@ -292,6 +381,33 @@
       </div>
     </div>
   </footer>
+    <div class="output-log mono" id="output-log" data-btab="output" hidden></div>
+  </section>
+
+  <!-- ============ STATUS BAR ============ -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <span class="status-item" id="status-git">Git: main*</span>
+      <span class="status-item" id="status-pattern">pattern_1.pattern</span>
+    </div>
+    <div class="status-right">
+      <span class="status-item" id="status-bpm">BPM: 124.00</span>
+      <span class="status-item">4/4</span>
+      <span class="status-item" id="status-transport">Stopped</span>
+      <span class="status-item">Buffer: 256</span>
+      <span class="status-item">44.1 kHz</span>
+      <span class="status-item">WebAudio API</span>
+    </div>
+  </footer>
+
+  <!-- ============ COMMAND PALETTE ============ -->
+  <div class="palette-backdrop" id="palette" hidden>
+    <div class="palette">
+      <div class="palette-header">VOIDSTATION COMMANDS</div>
+      <input class="palette-input mono" id="palette-input" placeholder="Type a command to run…" spellcheck="false" autocomplete="off">
+      <div class="palette-list" id="palette-list"></div>
+    </div>
+  </div>
 
   <!-- ============ INSERT FX PANEL ============ -->
   <div class="fx-panel" id="fx-panel" hidden>

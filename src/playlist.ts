@@ -46,6 +46,9 @@ export class PlaylistBar {
     this.engine = engine;
   }
 
+  // Optional callback fired when the current pattern is renamed.
+  onNameChange: ((name: string) => void) | null = null;
+
   mount(container: HTMLElement) {
     this.container = container;
     this.render();
@@ -100,6 +103,7 @@ export class PlaylistBar {
       this.engine.patterns[this.engine.currentPatternIndex].name = next;
       this.engine.commitHistory();
       name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
+      if (this.onNameChange) this.onNameChange(name.value);
       this.render();
     });
 
