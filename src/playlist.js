@@ -4,6 +4,8 @@
 //
 // - Click a bar cell to assign the CURRENT pattern to that bar.
 // - Right-click (or click the same assigned pattern again) clears the cell.
+// - Drag an assigned clip to another bar to move it (swaps if the target is
+//   occupied).
 // - An empty playlist plays the active pattern on a loop (legacy behaviour).
 // - The teal band marks the loop region (bars loopStart..loopEnd-1); its
 //   edges are draggable and the L button toggles looping.
@@ -18,11 +20,23 @@ export class PlaylistBar {
         this._loopHandleStart = null;
         this._loopHandleEnd = null;
         this._loopRange = null;
+        this._cellsEl = null;
+        this._lastDragAt = 0;
+        this._dragClip = null;
+        this._dragThreshold = 8; // px of movement before a drag starts
         this.engine = engine;
     }
     mount(container) {
         this.container = container;
         this.render();
+        // Widen the shared left gutter (--gutter-w) to match the sticky pattern
+        // controls so they never cover the first playlist bars. The cells, ruler
+        // corner and piano grid all align to this same gutter.
+        const controls = container.querySelector('.pl-controls');
+        const w = controls?.getBoundingClientRect().width;
+        if (w && w > 0) {
+            document.documentElement.style.setProperty('--gutter-w', `${Math.ceil(w)}px`);
+        }
         this.engine.onPatternChange(() => this.render());
         this.engine.onStepChange(() => this._syncPlayState());
         this.engine.onStateChange(() => this._syncPlayState());
@@ -125,6 +139,7 @@ export class PlaylistBar {
                 this.engine.commitHistory();
                 this.render();
             });
+            cell.addEventListener('pointerdown', (e) => this._onCellPointerDown(e, bar));
             cells.appendChild(cell);
             this.cells.push({ cell, value });
         }
@@ -144,6 +159,7 @@ export class PlaylistBar {
         this._attachHandleDrag(cells, hStart, 'start');
         this._attachHandleDrag(cells, hEnd, 'end');
         el.append(controls, cells);
+        this._cellsEl = cells;
         this._updateLoopVisuals();
         this._syncPlayState();
     }
@@ -159,6 +175,12 @@ export class PlaylistBar {
         }
     }
     _onCellClick(bar) {
+        // The browser synthesizes a click after a drag ends; it targets the common
+        // ancestor of press/release (never a cell), so only suppress clicks that
+        // arrive immediately after an actual drag (e.g. drag out and back to the
+        // same cell, which would otherwise toggle it).
+        if (performance.now() - this._lastDragAt < 300)
+            return;
         const cur = this.engine.playlist[bar];
         this.engine.beginHistory();
         // Clicking the same assigned pattern clears it; otherwise assign current.
@@ -170,6 +192,122 @@ export class PlaylistBar {
         }
         this.engine.commitHistory();
         this.render();
+    }
+    // --- Clip drag & drop (move clips along the timeline) ---
+    _onCellPointerDown(ev, bar) {
+        if (this._dragClip)
+            return; // already dragging
+        const patIdx = this.engine.playlist[bar];
+        if (patIdx === undefined)
+            return; // only assigned clips are draggable
+        ev.preventDefault(); // avoid text selection / native drag
+        const cell = ev.currentTarget;
+        cell.setPointerCapture(ev.pointerId);
+        this._dragClip = {
+            fromBar: bar,
+            patternIndex: patIdx,
+            startX: ev.clientX,
+            startY: ev.clientY,
+            active: false,
+            targetBar: bar,
+            ghost: null,
+        };
+        const move = (me) => this._onCellDragMove(me, cell);
+        const up = () => {
+            cell.removeEventListener('pointermove', move);
+            cell.removeEventListener('pointerup', up);
+            cell.removeEventListener('pointercancel', cancel);
+            this._endDrag();
+        };
+        const cancel = () => {
+            cell.removeEventListener('pointermove', move);
+            cell.removeEventListener('pointerup', up);
+            cell.removeEventListener('pointercancel', cancel);
+            this._cancelDrag();
+        };
+        cell.addEventListener('pointermove', move);
+        cell.addEventListener('pointerup', up);
+        cell.addEventListener('pointercancel', cancel);
+    }
+    _onCellDragMove(ev, cell) {
+        const d = this._dragClip;
+        if (!d)
+            return;
+        if (!d.active) {
+            if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < this._dragThreshold)
+                return;
+            d.active = true;
+            d.ghost = this._createGhost(d.patternIndex, ev.clientX, ev.clientY);
+            const src = this.cells[d.fromBar]?.cell;
+            if (src)
+                src.classList.add('dragging');
+        }
+        const ghost = d.ghost;
+        if (ghost) {
+            ghost.style.left = `${ev.clientX}px`;
+            ghost.style.top = `${ev.clientY}px`;
+        }
+        const cellsEl = this._cellsEl;
+        if (cellsEl) {
+            const rect = cellsEl.getBoundingClientRect();
+            const bar = Math.max(0, Math.min(this.PL_BARS - 1, Math.floor((ev.clientX - rect.left) / BAR_W)));
+            if (bar !== d.targetBar) {
+                this._toggleDropTarget(d.targetBar, false);
+                d.targetBar = bar;
+                this._toggleDropTarget(bar, true);
+            }
+        }
+        ev.preventDefault();
+    }
+    _endDrag() {
+        const d = this._dragClip;
+        if (!d)
+            return;
+        if (d.ghost) {
+            d.ghost.remove();
+            d.ghost = null;
+        }
+        this._dragClip = null;
+        this._toggleDropTarget(d.targetBar, false);
+        const src = this.cells[d.fromBar]?.cell;
+        if (src)
+            src.classList.remove('dragging');
+        if (d.active && d.targetBar !== d.fromBar) {
+            this.engine.beginHistory();
+            this.engine.movePlaylistClip(d.fromBar, d.targetBar);
+            this.engine.commitHistory();
+            this.render();
+        }
+        this._lastDragAt = d.active ? performance.now() : 0;
+    }
+    _cancelDrag() {
+        const d = this._dragClip;
+        if (!d)
+            return;
+        if (d.ghost) {
+            d.ghost.remove();
+            d.ghost = null;
+        }
+        this._dragClip = null;
+        this._toggleDropTarget(d.targetBar, false);
+        const src = this.cells[d.fromBar]?.cell;
+        if (src)
+            src.classList.remove('dragging');
+        this._lastDragAt = d.active ? performance.now() : 0;
+    }
+    _createGhost(patternIndex, x, y) {
+        const ghost = document.createElement('div');
+        ghost.className = 'ghost-clip mono';
+        ghost.textContent = `P${patternIndex + 1}`;
+        ghost.style.left = `${x}px`;
+        ghost.style.top = `${y}px`;
+        document.body.appendChild(ghost);
+        return ghost;
+    }
+    _toggleDropTarget(bar, on) {
+        const c = this.cells[bar]?.cell;
+        if (c)
+            c.classList.toggle('drop-target', on);
     }
     // Position the loop band/handles, refresh the range readout and dim cells
     // beyond the loop end. Called on every render and during handle drags

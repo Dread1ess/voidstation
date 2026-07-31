@@ -135,6 +135,24 @@ export class AudioEngine {
     this._notifyPatternChange();
   }
 
+  // Move a clip from one bar to another. If the destination is occupied the
+  // two clips swap; otherwise the source bar becomes empty. Extends the loop
+  // region when the clip lands beyond its end.
+  movePlaylistClip(fromBar: number, toBar: number) {
+    if (fromBar < 0 || toBar < 0 || fromBar === toBar) return;
+    const clip = this.playlist[fromBar];
+    if (clip === undefined) return;
+    const existing = this.playlist[toBar];
+    this.playlist[toBar] = clip;
+    if (existing !== undefined) {
+      this.playlist[fromBar] = existing; // swap
+    } else {
+      delete this.playlist[fromBar];     // move
+    }
+    if (this.loopEnabled && toBar + 1 > this.loopEnd) this.loopEnd = toBar + 1;
+    this._notifyPatternChange();
+  }
+
   // Effective loop end: explicit loopEnd, or the whole playlist when the
   // region is untouched (loopEnd <= loopStart).
   _effectiveLoopEnd(): number {
