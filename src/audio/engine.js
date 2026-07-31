@@ -1,7 +1,8 @@
 // Audio engine: Web Audio context, sample playback, BPM value.
 // No scheduling yet — Stage 1 is plain one-shot playback of a single sample.
+// Loaded as a classic script (works over file:// too, no ES module needed).
 
-export class AudioEngine {
+class AudioEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
@@ -85,3 +86,5 @@ export class AudioEngine {
     this.bpm = value;
   }
 }
+
+window.AudioEngine = AudioEngine;

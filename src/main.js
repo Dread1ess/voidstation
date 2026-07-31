@@ -1,7 +1,7 @@
 // Entry point: wires the transport UI to the audio engine.
-import { AudioEngine } from './audio/engine.js';
+// Classic script (loaded after src/audio/engine.js), works over file:// too.
 
-const engine = new AudioEngine();
+const engine = new window.AudioEngine();
 
 const fileInput = document.getElementById('file-input');
 const btnLoad = document.getElementById('btn-load');
@@ -91,5 +91,3 @@ bpmInput.addEventListener('change', () => {
     bpmInput.value = engine.bpm.toFixed(3);
   }
 });
-
-export { engine };
