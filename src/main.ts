@@ -189,6 +189,43 @@ document.querySelectorAll<HTMLElement>('.fader').forEach((fader, faderIndex) => 
   faders.push({ fader, cap, setLevel, setCapPosition });
 });
 
+// --- Mixer pan knobs (vertical drag, double-click resets to center) ---
+interface KnobHandle {
+  knob: HTMLElement;
+}
+const panKnobs: KnobHandle[] = [];
+document.querySelectorAll<HTMLElement>('.channel').forEach((ch, i) => {
+  const knob = ch.querySelector<HTMLElement>('.channel-head .knob');
+  if (!knob) return;
+
+  const applyPan = (pan: number) => {
+    engine.setTrackPan(i, pan);
+    knob.style.setProperty('--deg', `${pan * 135}deg`);
+  };
+
+  let dragging = false;
+  let dragPan = 0;
+  let dragStartY = 0;
+  knob.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    knob.setPointerCapture(e.pointerId);
+    dragging = true;
+    dragPan = engine.tracks[i].pan;
+    dragStartY = e.clientY;
+  });
+  knob.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const pan = Math.max(-1, Math.min(1, dragPan + (dragStartY - e.clientY) / 100));
+    applyPan(pan);
+  });
+  const endDrag = () => { dragging = false; };
+  knob.addEventListener('pointerup', endDrag);
+  knob.addEventListener('pointercancel', endDrag);
+  knob.addEventListener('dblclick', () => applyPan(0));
+
+  panKnobs.push({ knob });
+});
+
 // --- Mixer mute/solo buttons ---
 const channels = Array.from(document.querySelectorAll<HTMLElement>('.channel'));
 const muteButtons: (HTMLButtonElement | null)[] = [];
@@ -231,6 +268,11 @@ function refreshAllUI() {
     f.setCapPosition(t);
     const meterFill = f.fader.parentElement!.querySelector<HTMLElement>('.meter-fill');
     if (meterFill) meterFill.style.height = `${t * 100}%`;
+  });
+
+  // Pan knobs
+  panKnobs.forEach((k, i) => {
+    k.knob.style.setProperty('--deg', `${engine.tracks[i].pan * 135}deg`);
   });
 
   // Mute/solo buttons

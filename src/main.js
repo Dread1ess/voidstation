@@ -164,6 +164,37 @@ document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
     fader.addEventListener('pointercancel', () => { dragging = false; });
     faders.push({ fader, cap, setLevel, setCapPosition });
 });
+const panKnobs = [];
+document.querySelectorAll('.channel').forEach((ch, i) => {
+    const knob = ch.querySelector('.channel-head .knob');
+    if (!knob)
+        return;
+    const applyPan = (pan) => {
+        engine.setTrackPan(i, pan);
+        knob.style.setProperty('--deg', `${pan * 135}deg`);
+    };
+    let dragging = false;
+    let dragPan = 0;
+    let dragStartY = 0;
+    knob.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        knob.setPointerCapture(e.pointerId);
+        dragging = true;
+        dragPan = engine.tracks[i].pan;
+        dragStartY = e.clientY;
+    });
+    knob.addEventListener('pointermove', (e) => {
+        if (!dragging)
+            return;
+        const pan = Math.max(-1, Math.min(1, dragPan + (dragStartY - e.clientY) / 100));
+        applyPan(pan);
+    });
+    const endDrag = () => { dragging = false; };
+    knob.addEventListener('pointerup', endDrag);
+    knob.addEventListener('pointercancel', endDrag);
+    knob.addEventListener('dblclick', () => applyPan(0));
+    panKnobs.push({ knob });
+});
 // --- Mixer mute/solo buttons ---
 const channels = Array.from(document.querySelectorAll('.channel'));
 const muteButtons = [];
@@ -202,6 +233,10 @@ function refreshAllUI() {
         const meterFill = f.fader.parentElement.querySelector('.meter-fill');
         if (meterFill)
             meterFill.style.height = `${t * 100}%`;
+    });
+    // Pan knobs
+    panKnobs.forEach((k, i) => {
+        k.knob.style.setProperty('--deg', `${engine.tracks[i].pan * 135}deg`);
     });
     // Mute/solo buttons
     muteButtons.forEach((btn, i) => {

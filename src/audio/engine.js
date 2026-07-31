@@ -16,13 +16,13 @@ export class AudioEngine {
         this.schedulerInterval = null; // setInterval handle
         this.lookahead = 0.1; // schedule 100ms ahead
         this.scheduleInterval = 25; // scheduler tick every 25ms
-        // Tracks: each track has sample, gain, pattern (16 steps), pianoGrid (24x16), mute/solo/volume
+        // Tracks: each track has sample, gain, panner, pattern (16 steps), pianoGrid (24x16), mute/solo/volume/pan
         this.tracks = [
-            { name: 'Kick', sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-            { name: 'Snare', sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-            { name: 'Bass', sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-            { name: 'Synth', sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-            { name: 'Pads', sample: null, sampleData: null, sampleName: null, gain: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+            { name: 'Kick', sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+            { name: 'Snare', sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+            { name: 'Bass', sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+            { name: 'Synth', sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+            { name: 'Pads', sample: null, sampleData: null, sampleName: null, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
         ];
         this.trackCount = 5;
         this._activeTrackCount = 5;
@@ -253,11 +253,14 @@ export class AudioEngine {
             this.master = this.ctx.createGain();
             this.master.gain.value = 0.8;
             this.master.connect(this.ctx.destination);
-            // Create per-track gain nodes
+            // Create per-track gain + pan nodes
             this.tracks.forEach(t => {
                 t.gain = this.ctx.createGain();
                 t.gain.gain.value = t.volume;
-                t.gain.connect(this.master);
+                t.panner = this.ctx.createStereoPanner();
+                t.panner.pan.value = t.pan;
+                t.gain.connect(t.panner);
+                t.panner.connect(this.master);
             });
         }
         if (this.ctx.state === 'suspended') {
@@ -301,6 +304,15 @@ export class AudioEngine {
             track.volume = Math.max(0, Math.min(1, volume));
             this._rebuildGain(trackIndex);
         }
+    }
+    // Set track pan (-1..1, left..right)
+    setTrackPan(trackIndex, pan) {
+        const track = this.tracks[trackIndex];
+        if (!track)
+            return;
+        track.pan = Math.max(-1, Math.min(1, pan));
+        if (track.panner)
+            track.panner.pan.value = track.pan;
     }
     // Effective per-track gain: volume, scaled by mute/solo routing.
     _effectiveVolume(trackIndex) {
@@ -465,7 +477,10 @@ export class AudioEngine {
         const trackGains = this.tracks.map((_, i) => {
             const g = offline.createGain();
             g.gain.value = this._effectiveVolume(i);
-            g.connect(master);
+            const p = offline.createStereoPanner();
+            p.pan.value = this.tracks[i].pan;
+            g.connect(p);
+            p.connect(master);
             return g;
         });
         for (let barIdx = 0; barIdx < barCount; barIdx++) {
@@ -551,6 +566,7 @@ export class AudioEngine {
                 volume: t.volume,
                 mute: t.mute,
                 solo: t.solo,
+                pan: t.pan,
                 synthType: t.synthType,
                 adsr: { ...t.adsr },
             })),
@@ -620,6 +636,9 @@ export class AudioEngine {
             track.volume = saved.volume !== undefined ? saved.volume : 1;
             track.mute = !!saved.mute;
             track.solo = !!saved.solo;
+            track.pan = saved.pan !== undefined ? saved.pan : 0;
+            if (track.panner)
+                track.panner.pan.value = track.pan;
             track.synthType = saved.synthType || 'sine';
             if (saved.adsr && typeof saved.adsr === 'object') {
                 track.adsr = {
@@ -675,6 +694,9 @@ export class AudioEngine {
             t.volume = 1;
             t.mute = false;
             t.solo = false;
+            t.pan = 0;
+            if (t.panner)
+                t.panner.pan.value = 0;
             t.noiseBuffer = null;
         });
         this.patterns = [{

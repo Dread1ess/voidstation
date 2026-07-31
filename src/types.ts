@@ -54,7 +54,7 @@ export interface MixerChannel {
   volume: number; // 0..1
   mute: boolean;
   solo: boolean;
-  pan: number;    // -1..1 (зарезервировано, пока не используется)
+  pan: number;    // -1..1 (left..right), применяется через StereoPannerNode
 }
 
 // Трек целиком: аудио-состояние + «живые» ссылки на данные текущего паттерна
@@ -64,6 +64,7 @@ export interface Track extends MixerChannel {
   sampleData: ArrayBuffer | null;
   sampleName: string | null;
   gain: GainNode | null;
+  panner: StereoPannerNode | null;
   pattern: boolean[];   // ссылка на данные активного паттерна (сэмпл-слой)
   pianoGrid: number[][]; // ссылка на данные активного паттерна (синт-слой)
   synthType: WaveformType;
@@ -79,6 +80,7 @@ export interface TrackSettings {
   volume: number;
   mute: boolean;
   solo: boolean;
+  pan: number;
   synthType: WaveformType;
   adsr: AdsrParams;
 }
