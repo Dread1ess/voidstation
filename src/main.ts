@@ -56,6 +56,37 @@ const playlistEl = document.getElementById('playlist-strip');
 if (playlistEl) {
   playlist.mount(playlistEl);
 }
+// Pattern toolbar (prev/next/name/count/add/del/loop) lives in the sidebar;
+// the timeline keeps only the clean bar cells.
+playlist.mountPatternControls(document.getElementById('pattern-controls'));
+
+// Per-track syntax-highlight colors (VS Code palette), used by the step
+// sequencer matrix and the piano-roll note fill.
+const TRACK_COLORS = ['#4ec9b0', '#ce9178', '#569cd6', '#c586c0', '#6a9955'];
+
+// Explorer: pattern list (one tree row per pattern, click to select).
+function renderPatternTree() {
+  const host = document.getElementById('pattern-list');
+  if (!host) return;
+  host.innerHTML = '';
+  engine.patterns.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'tree-item tree-file' + (i === engine.currentPatternIndex ? ' selected' : '');
+    const arrow = document.createElement('span');
+    arrow.textContent = '▸';
+    arrow.className = i === engine.currentPatternIndex ? 'tree-color-accent' : '';
+    const name = document.createElement('span');
+    name.className = 'tree-name';
+    if (i === engine.currentPatternIndex) name.id = 'tree-current-pattern';
+    name.textContent = `${p.name}.pattern`;
+    name.title = p.name;
+    row.append(arrow, name);
+    row.addEventListener('click', () => engine.switchPattern(i));
+    host.appendChild(row);
+  });
+}
+renderPatternTree();
+engine.onPatternChange(() => renderPatternTree());
 
 // When the active pattern changes, re-render editors that show its data
 engine.onPatternChange(() => {
@@ -119,6 +150,7 @@ function highlightCurrentTrack(trackIndex: number) {
   channels.forEach((ch, i) => ch.classList.toggle('selected', i === trackIndex));
   pianoRoll.setActiveTrack(trackIndex);
   instrument.setTrack(trackIndex);
+  document.documentElement.style.setProperty('--note-color', TRACK_COLORS[trackIndex % TRACK_COLORS.length]);
 }
 
 btnLoad.addEventListener('click', () => fileInput.click());
@@ -570,6 +602,10 @@ function refreshAllUI() {
   // Insert FX buttons + panel
   updateFxButtons();
   if (fxPanel && !fxPanel.hidden) renderFxList();
+
+  // Playlist cells + sidebar pattern list/toolbar
+  playlist.render();
+  renderPatternTree();
 
   syncEditorTabName();
   syncStatusBar();

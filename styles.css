@@ -7,16 +7,19 @@
 :root {
   --bg: #1e1e1e;
   --panel: #252526;
-  --panel-2: #2d2d30;
+  --panel-2: #2d2d2d;
   --panel-3: #333333;
-  --edge: #333333;
-  --edge-light: #454545;
+  --edge: #3c3c3c;
+  --edge-light: #4a4a4a;
+  --hairline: rgba(255, 255, 255, 0.08);
   --text: #d4d4d4;
   --text-dim: #9d9d9d;
   --text-faint: #6e6e6e;
   --accent: #007acc;
   --accent-dim: rgba(0, 122, 204, 0.28);
   --accent-fade: rgba(0, 122, 204, 0.6);
+  --active-bg: #04395e;
+  --active-bg2: #2a2d2e;
 
   /* VS Code surfaces */
   --titlebar-bg: #323233;
@@ -1441,53 +1444,101 @@ body {
 }
 
 /* ============================================================
-   FLAT SKIN — neutralise leftover hardware gradients/shadows
-   (VS Code skin: flat surfaces, 1px borders, no skeuomorphic
-   knobs or bevels)
+   STRICT VS CODE / FLAT SKIN
+   - 1px crisp borders (hairline / #3c3c3c), radius 0–2px only
+   - active = subtle background highlight, never stroke outlines
+   - flat step matrix + per-track syntax colors, no skeuomorphism
+   - mono type for all names / numbers / labels
    ============================================================ */
 
+/* --- radius clamp: 0 or 2px everywhere --- */
+.btn,
+.mini-btn,
+.pl-btn,
+.pl-name,
+.instr-select,
+.sample-wave-wrap,
+.ghost-clip,
+.loop-region,
+.loop-handle,
+.mixer-resize-handle::after,
+.channel,
+.knob,
+.fader,
+.fader-cap,
+.meter,
+.palette,
+.palette-input,
+.palette-item,
+.drop-box,
+.fx-panel,
+.fx-panel-header,
+.fx-add-btn,
+.fx-row,
+.fx-preset,
+.bt-tab,
+.editor-tab,
+.palette-empty {
+  border-radius: 2px;
+}
+.seq-step,
+.pl-cell,
+.pr-cell,
+.key-white,
+.key-black,
+.section-header,
+.tree-item,
+.tracklist-header,
+.instrument-panel,
+.corner,
+.ruler,
+.status-item,
+.menu-item,
+.act-btn {
+  border-radius: 0;
+}
+
+/* --- buttons: flat #3c3c3c, active = bg highlight --- */
 .btn {
   background: #3c3c3c;
-  border-color: var(--edge-light);
+  border-color: var(--edge);
   box-shadow: none;
 }
-.btn:hover { filter: brightness(1.15); color: var(--accent); }
+.btn:hover { filter: brightness(1.15); color: var(--text); }
 .btn:active { filter: brightness(0.9); }
 .btn.active {
-  color: #fff;
-  border-color: var(--accent);
-  background: var(--accent-dim);
+  color: #9cdcfe;
+  background: var(--active-bg);
+  border-color: var(--edge);
   box-shadow: none;
 }
 
 .readout {
   background: var(--bg);
-  border-color: var(--edge-light);
+  border-color: var(--edge);
   border-radius: 2px;
   box-shadow: none;
 }
 
 .mini-btn {
   background: #3c3c3c;
-  border-color: var(--edge-light);
+  border-color: var(--edge);
   box-shadow: none;
 }
 .mini-btn.active-solo {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--active-bg);
+  border-color: var(--edge);
+  color: #9cdcfe;
 }
 .mini-btn.active-mute {
-  background: rgba(160, 74, 74, 0.3);
-  border-color: rgba(160, 74, 74, 0.6);
-  box-shadow: none;
+  background: #3f2b2b;
+  border-color: var(--edge);
+  color: #e08a8a;
 }
 
 .tracklist-header,
 .instrument-panel,
 .playlist-strip,
-.pl-controls,
-.pl-btn,
 .pl-cell,
 .corner,
 .ruler {
@@ -1495,13 +1546,12 @@ body {
   box-shadow: none;
 }
 .pl-cell {
-  background: #2d2d30;
-  border-color: var(--edge);
+  background: #252526;
+  border-color: var(--hairline);
 }
-.pl-cell.playing {
-  background: var(--accent-dim);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
+.pl-cell:hover { border-color: var(--edge-light); }
+.pl-cell.playing { background: var(--active-bg); }
+.pl-cell.drop-target { background: var(--active-bg); box-shadow: none; }
 
 .instrument-panel {
   border-radius: 0;
@@ -1514,93 +1564,284 @@ body {
 }
 .sample-wave-wrap { background: rgba(0, 0, 0, 0.4); }
 
-/* step sequencer */
-.step-sequencer {
-  border-radius: 3px;
+/* --- sidebar pattern toolbar (hosted in EXPLORER) --- */
+#pattern-controls .pl-controls,
+.pl-controls {
+  position: static;
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--edge);
   box-shadow: none;
+}
+.pl-btn {
+  width: 22px; height: 22px;
+  background: #3c3c3c;
+  border: 1px solid var(--edge);
+  box-shadow: none;
+  font-size: 11px;
+}
+.pl-btn:hover { color: var(--text); background: #454545; }
+.pl-btn.pl-del:hover { color: #e08a8a; border-color: var(--edge); }
+.pl-btn.pl-loop.active {
+  color: #9cdcfe;
+  background: var(--active-bg);
+  border-color: var(--edge);
+  box-shadow: none;
+}
+.pl-name {
+  width: 92px; height: 22px;
+  padding: 0 5px;
+  background: var(--bg);
+  border: 1px solid var(--edge);
+  box-shadow: none;
+  font-size: 11px;
+}
+.pl-name:focus { border-color: var(--accent); }
+.pl-count, .pl-loop-range { font-size: 10px; }
+
+/* --- step sequencer: continuous flat matrix, 1px dark separators --- */
+.step-sequencer {
+  gap: 1px;
+  padding: 1px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  box-shadow: none;
+}
+.seq-track-label {
+  font-size: 9px;
+  color: var(--text-faint);
+  padding: 4px 8px;
+  align-self: center;
+}
+.seq-step-num {
+  height: 26px;
+  font-size: 9px;
+  color: var(--text-faint);
+}
+.seq-track-name {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .seq-step {
-  background: #2d2d30;
-  border-color: var(--edge);
+  width: 100%;
+  height: 26px;
+  background: #1e1e1e;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
 }
-.seq-step:hover {
-  border-color: var(--accent);
-  background: #3c3c3c;
-}
+.seq-step:hover { background: #2d2d2d; }
 .seq-step.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
+  background: #569cd6;
+  border: none;
   box-shadow: none;
 }
+.seq-step[data-track="0"].active { background: #4ec9b0; }
+.seq-step[data-track="1"].active { background: #ce9178; }
+.seq-step[data-track="2"].active { background: #569cd6; }
+.seq-step[data-track="3"].active { background: #c586c0; }
+.seq-step[data-track="4"].active { background: #6a9955; }
+.seq-step.playing { filter: brightness(1.85); }
+.seq-step:active { transform: scale(0.98); }
 
-/* mixer + channels */
+/* --- piano keys + notes: flat, no borders on fills --- */
+.key-white {
+  background: #3c3c3c;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow: none;
+}
+.key-white.c-label { color: #9d9d9d; }
+.key-black {
+  background: #171717;
+  border: 1px solid #0f0f0f;
+  border-top: none;
+  box-shadow: none;
+}
+.pr-cell.active {
+  background: var(--note-color, #569cd6);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.pr-cell.tail {
+  background: var(--note-color, #569cd6);
+  opacity: 0.45;
+  border: none;
+  box-shadow: none;
+}
+.pr-cell.playing { filter: brightness(1.5); }
+
+/* --- mixer: flat #1e1e1e, thin meters, no 3D --- */
 .mixer {
-  background: var(--panel);
+  background: var(--bg);
   box-shadow: none;
 }
 .channel {
-  background: #2d2d30;
-  border-color: var(--edge);
+  background: #1e1e1e;
+  border: 1px solid var(--edge);
   border-radius: 0;
   box-shadow: none;
 }
 .channel.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--active-bg2);
+  border-color: var(--edge);
+  box-shadow: none;
 }
+.channel.selected .channel-name,
+.channel.selected .led { color: #9cdcfe; }
+
+/* pan: flat vector dial (square, rotating indicator) */
 .knob {
-  background: #3c3c3c;
-  border-color: var(--edge-light);
+  width: 22px; height: 22px;
+  background: #1e1e1e;
+  border: 1px solid var(--edge);
   box-shadow: none;
 }
-.knob::after { background: var(--text-dim); }
+.knob::after {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 2px; height: 7px;
+  margin-left: -1px; margin-top: -7px;
+  background: var(--text-dim);
+  border-radius: 0;
+  transform: rotate(var(--deg));
+  transform-origin: 50% 100%;
+}
+.channel.selected .knob::after { background: #9cdcfe; }
+
+/* gain: thin flat vertical track */
 .fader {
-  background: #232323;
-  border-color: var(--edge);
+  width: 6px;
+  background: #3c3c3c;
+  border: none;
   box-shadow: none;
 }
+.fader::before { display: none; }
 .fader-cap {
-  background: #4a4a4a;
-  border-color: var(--edge-light);
+  left: -5px;
+  width: 16px; height: 2px;
+  background: var(--accent);
+  border: none;
   box-shadow: none;
 }
+.fader-cap::after { display: none; }
+.channel:not(.selected) .fader-cap { background: #9d9d9d; }
+
+/* meters: thin flat */
 .meter {
-  background: #1a1a1a;
-  border-color: var(--edge);
+  width: 5px;
+  background: #0d0d0d;
+  border: 1px solid #252526;
   box-shadow: none;
 }
 .meter-fill {
-  background: linear-gradient(to top, #388a63, #a4a434 60%, #d4843a 82%, #e04a4a 98%);
+  background: linear-gradient(to top, #3c8a63, #a4a434 60%, #d4843a 82%, #e04a4a 98%);
 }
 .meter-fill::after { background: none; }
+.led {
+  background: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  box-shadow: none;
+}
+.channel.selected .led { background: #9cdcfe; }
 
-/* fx panel */
+/* --- fx panel --- */
 .fx-panel {
-  background: var(--panel-2);
-  border-color: var(--edge-light);
-  border-radius: 4px;
+  background: var(--panel);
+  border-color: var(--edge);
+  border-radius: 2px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
-.fx-panel-header {
-  background: var(--panel-3);
-}
-.fx-row { background: #2d2d30; }
+.fx-panel-header { background: var(--panel-3); }
+.fx-row { background: #252526; border-color: var(--edge); }
 .fx-preset { background: var(--bg); }
 .fx-btn.active-fx {
-  background: var(--accent-dim);
-  border-color: var(--accent);
+  background: var(--active-bg);
+  border-color: var(--edge);
+  color: #9cdcfe;
 }
 
-/* piano roll note fill: flat solid color */
-.pr-cell.active {
-  background: var(--accent);
-  border: 1px solid #4ea7de;
-  border-radius: 1px;
-  box-shadow: none;
+/* --- command palette --- */
+.palette {
+  background: var(--panel-2);
+  border-color: var(--edge);
+  border-radius: 2px;
 }
-.pr-cell.tail {
-  background: rgba(0, 122, 204, 0.55);
-  border-top: 1px solid #4ea7de;
-  border-bottom: 1px solid #4ea7de;
-  box-shadow: none;
+.palette-input { border-top-color: var(--edge); border-bottom-color: var(--edge); }
+.palette-item:hover,
+.palette-item.selected { background: var(--active-bg); color: #fff; }
+
+/* --- editor tabs: active tab = body highlight + 1px accent rule --- */
+.editor-tab.active {
+  background: var(--tab-active-bg);
+  color: #fff;
+  border-top: 1px solid var(--accent);
+}
+
+/* --- sidebar / explorer density + mono labels --- */
+.section-header {
+  height: 26px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+.tree-title {
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+.tree-item {
+  height: 22px;
+  padding: 0 8px 0 10px;
+  font-size: 12px;
+  line-height: 22px;
+}
+.tree-item.selected { background: var(--active-bg); color: #fff; }
+.tree-color-accent { color: #9cdcfe; }
+
+/* --- mono type: all names, numbers, time codes, labels --- */
+.track-name,
+.track-instr,
+.channel-name,
+.seq-track-name,
+.seq-step-num,
+.pl-cell-num,
+.pl-cell-val,
+.pl-count,
+.pl-loop-range,
+.tree-name,
+.section-header,
+.tree-title,
+.tracklist-header,
+.readout-label,
+.readout-value,
+.bpm-input,
+.status-item,
+.instr-label,
+.instr-value,
+.instrument-name,
+.fx-param-label,
+.fx-type-name,
+.fx-param-val,
+.mixer-label,
+.sample-filename,
+.sample-trim-info,
+.status-bar .status-item {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }

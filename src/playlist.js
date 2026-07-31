@@ -26,30 +26,30 @@ export class PlaylistBar {
         this._dragThreshold = 8; // px of movement before a drag starts
         // Optional callback fired when the current pattern is renamed.
         this.onNameChange = null;
+        this._controlsHost = null;
+        this._nameInput = null;
+        this._countEl = null;
+        this._loopBtn = null;
         this.engine = engine;
     }
     mount(container) {
         this.container = container;
         this.render();
-        // Widen the shared left gutter (--gutter-w) to match the sticky pattern
-        // controls so they never cover the first playlist bars. The cells, ruler
-        // corner and piano grid all align to this same gutter.
-        const controls = container.querySelector('.pl-controls');
-        const w = controls?.getBoundingClientRect().width;
-        if (w && w > 0) {
-            document.documentElement.style.setProperty('--gutter-w', `${Math.ceil(w)}px`);
-        }
-        this.engine.onPatternChange(() => this.render());
+        this.engine.onPatternChange(() => { this.render(); this._syncControls(); });
         this.engine.onStepChange(() => this._syncPlayState());
         this.engine.onStateChange(() => this._syncPlayState());
     }
-    render() {
-        if (!this.container)
+    // Mount the pattern toolbar (prev/next/name/count/add/del/loop) into an
+    // external host — the timeline stays a clean editor strip.
+    mountPatternControls(container) {
+        this._controlsHost = container;
+        if (!container)
             return;
-        const el = this.container;
-        el.innerHTML = '';
-        el.classList.add('playlist-strip');
-        // --- Pattern controls (sticky left) ---
+        container.innerHTML = '';
+        container.appendChild(this._buildControls());
+        this._syncControls();
+    }
+    _buildControls() {
         const controls = document.createElement('div');
         controls.className = 'pl-controls';
         const prev = document.createElement('button');
@@ -80,7 +80,7 @@ export class PlaylistBar {
             name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
             if (this.onNameChange)
                 this.onNameChange(name.value);
-            this.render();
+            this._syncControls();
         });
         const count = document.createElement('span');
         count.className = 'pl-count mono';
@@ -93,7 +93,7 @@ export class PlaylistBar {
             this.engine.beginHistory();
             this.engine.duplicatePattern();
             this.engine.commitHistory();
-            this.render();
+            this._syncControls();
         });
         const del = document.createElement('button');
         del.className = 'pl-btn pl-del';
@@ -103,7 +103,7 @@ export class PlaylistBar {
             this.engine.beginHistory();
             this.engine.deletePattern(this.engine.currentPatternIndex);
             this.engine.commitHistory();
-            this.render();
+            this._syncControls();
         });
         const loopBtn = document.createElement('button');
         loopBtn.className = 'pl-btn pl-loop';
@@ -114,12 +114,35 @@ export class PlaylistBar {
             this.engine.beginHistory();
             this.engine.toggleLoop();
             this.engine.commitHistory();
-            this.render();
+            this._syncControls();
         });
         const loopRange = document.createElement('span');
         loopRange.className = 'pl-loop-range mono';
         this._loopRange = loopRange;
         controls.append(prev, next, name, count, add, del, loopBtn, loopRange);
+        this._nameInput = name;
+        this._countEl = count;
+        this._loopBtn = loopBtn;
+        return controls;
+    }
+    _syncControls() {
+        const pat = this.engine.patterns[this.engine.currentPatternIndex];
+        if (!pat)
+            return;
+        if (this._nameInput)
+            this._nameInput.value = pat.name;
+        if (this._countEl)
+            this._countEl.textContent = `${this.engine.currentPatternIndex + 1}/${this.engine.patterns.length}`;
+        if (this._loopBtn)
+            this._loopBtn.classList.toggle('active', this.engine.loopEnabled);
+        this._updateLoopVisuals();
+    }
+    render() {
+        if (!this.container)
+            return;
+        const el = this.container;
+        el.innerHTML = '';
+        el.classList.add('playlist-strip');
         // --- Playlist cells ---
         const cells = document.createElement('div');
         cells.className = 'pl-cells';
@@ -162,7 +185,7 @@ export class PlaylistBar {
         this._loopHandleEnd = hEnd;
         this._attachHandleDrag(cells, hStart, 'start');
         this._attachHandleDrag(cells, hEnd, 'end');
-        el.append(controls, cells);
+        el.append(cells);
         this._cellsEl = cells;
         this._updateLoopVisuals();
         this._syncPlayState();

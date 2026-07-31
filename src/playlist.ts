@@ -49,29 +49,30 @@ export class PlaylistBar {
   // Optional callback fired when the current pattern is renamed.
   onNameChange: ((name: string) => void) | null = null;
 
+  private _controlsHost: HTMLElement | null = null;
+  private _nameInput: HTMLInputElement | null = null;
+  private _countEl: HTMLElement | null = null;
+  private _loopBtn: HTMLButtonElement | null = null;
+
   mount(container: HTMLElement) {
     this.container = container;
     this.render();
-    // Widen the shared left gutter (--gutter-w) to match the sticky pattern
-    // controls so they never cover the first playlist bars. The cells, ruler
-    // corner and piano grid all align to this same gutter.
-    const controls = container.querySelector('.pl-controls');
-    const w = controls?.getBoundingClientRect().width;
-    if (w && w > 0) {
-      document.documentElement.style.setProperty('--gutter-w', `${Math.ceil(w)}px`);
-    }
-    this.engine.onPatternChange(() => this.render());
+    this.engine.onPatternChange(() => { this.render(); this._syncControls(); });
     this.engine.onStepChange(() => this._syncPlayState());
     this.engine.onStateChange(() => this._syncPlayState());
   }
 
-  render() {
-    if (!this.container) return;
-    const el = this.container;
-    el.innerHTML = '';
-    el.classList.add('playlist-strip');
+  // Mount the pattern toolbar (prev/next/name/count/add/del/loop) into an
+  // external host — the timeline stays a clean editor strip.
+  mountPatternControls(container: HTMLElement | null) {
+    this._controlsHost = container;
+    if (!container) return;
+    container.innerHTML = '';
+    container.appendChild(this._buildControls());
+    this._syncControls();
+  }
 
-    // --- Pattern controls (sticky left) ---
+  _buildControls(): HTMLElement {
     const controls = document.createElement('div');
     controls.className = 'pl-controls';
 
@@ -104,7 +105,7 @@ export class PlaylistBar {
       this.engine.commitHistory();
       name.value = this.engine.patterns[this.engine.currentPatternIndex].name;
       if (this.onNameChange) this.onNameChange(name.value);
-      this.render();
+      this._syncControls();
     });
 
     const count = document.createElement('span');
@@ -119,7 +120,7 @@ export class PlaylistBar {
       this.engine.beginHistory();
       this.engine.duplicatePattern();
       this.engine.commitHistory();
-      this.render();
+      this._syncControls();
     });
 
     const del = document.createElement('button');
@@ -130,7 +131,7 @@ export class PlaylistBar {
       this.engine.beginHistory();
       this.engine.deletePattern(this.engine.currentPatternIndex);
       this.engine.commitHistory();
-      this.render();
+      this._syncControls();
     });
 
     const loopBtn = document.createElement('button');
@@ -142,7 +143,7 @@ export class PlaylistBar {
       this.engine.beginHistory();
       this.engine.toggleLoop();
       this.engine.commitHistory();
-      this.render();
+      this._syncControls();
     });
 
     const loopRange = document.createElement('span');
@@ -150,6 +151,26 @@ export class PlaylistBar {
     this._loopRange = loopRange;
 
     controls.append(prev, next, name, count, add, del, loopBtn, loopRange);
+    this._nameInput = name;
+    this._countEl = count;
+    this._loopBtn = loopBtn;
+    return controls;
+  }
+
+  _syncControls() {
+    const pat = this.engine.patterns[this.engine.currentPatternIndex];
+    if (!pat) return;
+    if (this._nameInput) this._nameInput.value = pat.name;
+    if (this._countEl) this._countEl.textContent = `${this.engine.currentPatternIndex + 1}/${this.engine.patterns.length}`;
+    if (this._loopBtn) this._loopBtn.classList.toggle('active', this.engine.loopEnabled);
+    this._updateLoopVisuals();
+  }
+
+  render() {
+    if (!this.container) return;
+    const el = this.container;
+    el.innerHTML = '';
+    el.classList.add('playlist-strip');
 
     // --- Playlist cells ---
     const cells = document.createElement('div');
@@ -201,7 +222,7 @@ export class PlaylistBar {
     this._attachHandleDrag(cells, hStart, 'start');
     this._attachHandleDrag(cells, hEnd, 'end');
 
-    el.append(controls, cells);
+    el.append(cells);
     this._cellsEl = cells;
     this._updateLoopVisuals();
     this._syncPlayState();
