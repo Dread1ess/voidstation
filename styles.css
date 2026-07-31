@@ -146,6 +146,48 @@ body {
   min-width: 70px; text-align: right;
 }
 
+/* --- editable BPM readout --- */
+.bpm-input {
+  border: none; outline: none; background: transparent;
+  color: var(--text); text-align: right;
+  width: 78px; padding: 0;
+  appearance: textfield;
+}
+.bpm-input::-webkit-outer-spin-button,
+.bpm-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.bpm-input:hover { color: var(--accent); }
+.bpm-input:focus { color: var(--accent); }
+
+/* --- sample load group --- */
+.t-sample { gap: 8px; min-width: 0; }
+.sample-name {
+  font-size: 11px; color: var(--text-faint);
+  max-width: 200px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sample-name.loaded { color: var(--text); }
+.sample-name.loaded::before { content: "\25CF "; color: var(--accent); }
+
+/* --- drag & drop overlay --- */
+.drop-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0, 217, 208, 0.06);
+  border: 2px dashed rgba(0, 217, 208, 0.45);
+  pointer-events: none;
+}
+.drop-overlay.visible { display: flex; }
+.drop-box {
+  padding: 26px 44px;
+  background: var(--panel-3);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
 /* ============================================================
    WORK AREA
    ============================================================ */
@@ -497,6 +539,7 @@ body {
 
 @media (max-width: 940px) {
   .t-readouts .readout:first-child { display: none; }
+  .sample-name { max-width: 120px; }
   .track-instr { display: none; }
   .workarea { grid-template-columns: 172px 1fr; }
   .track-plate { width: 28px; height: 28px; }

@@ -22,7 +22,7 @@
     </div>
 
     <div class="t-group t-controls">
-      <button class="btn btn-icon active" id="btn-play" title="Play">
+      <button class="btn btn-icon" id="btn-play" title="Play">
         <svg width="12" height="14" viewBox="0 0 12 14"><path d="M0 0 L12 7 L0 14 Z" fill="currentColor"/></svg>
       </button>
       <button class="btn btn-icon" id="btn-stop" title="Stop">
@@ -33,10 +33,18 @@
       </button>
     </div>
 
+    <div class="t-group t-sample">
+      <button class="btn btn-icon" id="btn-load" title="Load audio sample">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v7m0 0L4 6m3 3l3-3M2 10v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1"/></svg>
+      </button>
+      <span class="sample-name mono" id="sample-name">no sample</span>
+    </div>
+    <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.ogg,.flac,.aiff" hidden>
+
     <div class="t-group t-readouts">
       <div class="readout">
         <span class="readout-label">BPM</span>
-        <span class="readout-value mono">124.000</span>
+        <input type="number" class="readout-value mono bpm-input" id="bpm-input" value="124.000" step="0.5" min="20" max="300" inputmode="decimal" title="Tempo (beats per minute)">
       </div>
       <div class="readout">
         <span class="readout-label">TIME</span>
@@ -200,6 +208,12 @@
   </footer>
 
 </div>
+
+<div class="drop-overlay" id="drop-overlay">
+  <div class="drop-box">Drop audio sample</div>
+</div>
+
 <script src="app.js"></script>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>

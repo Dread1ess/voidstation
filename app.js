@@ -54,23 +54,6 @@ for (let i = 0; i < 24; i++) {
 /* ---------- playhead: static position at bar 09 ---------- */
 playhead.style.left = 8 * BAR + 'px';
 
-/* ---------- transport: visual toggles ---------- */
-const btnPlay = document.getElementById('btn-play');
-const btnStop = document.getElementById('btn-stop');
-const btnRec = document.getElementById('btn-rec');
-
-btnPlay.addEventListener('click', () => {
-  btnPlay.classList.add('active');
-  btnStop.classList.remove('active');
-});
-btnStop.addEventListener('click', () => {
-  btnPlay.classList.remove('active');
-  btnStop.classList.add('active');
-});
-btnRec.addEventListener('click', () => {
-  btnRec.classList.toggle('active');
-});
-
 /* ---------- mute / solo toggles ---------- */
 document.querySelectorAll('.mini-btn[data-mute]').forEach((b) => {
   b.addEventListener('click', () => b.classList.toggle('active-mute'));
