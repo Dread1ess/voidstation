@@ -1,5 +1,14 @@
 // Piano Roll UI: 24 pitch rows x 16 step columns grid for synth notes.
 // Classic script (works over file:// too, no ES module needed).
+//
+// Note model: engine.tracks[t].pianoGrid[pitch][step] holds the note length
+// in steps (0 = no note). A note is triggered at its head cell; the tail cells
+// are drawn visually as an extension of the head.
+//
+// Mouse behavior:
+//   - left-drag across empty cells   -> draw a note spanning those cells
+//   - click on a note head           -> erase that note
+//   - right-click (or left-drag the head's right edge) -> resize / erase
 
 class PianoRoll {
   constructor(engine) {
@@ -8,6 +17,9 @@ class PianoRoll {
     this.activeTrackIndex = 3; // Default to Synth track (index 3)
     this.gridElements = []; // [pitchIndex][stepIndex] -> element
     this.currentStep = -1;
+
+    // Drag state
+    this._drag = null; // { pitch, startStep, mode: 'draw' | 'erase' | 'resize', noteLength }
   }
 
   setActiveTrack(trackIndex) {
@@ -26,7 +38,18 @@ class PianoRoll {
 
     // Wire preview notes to piano keys on the left strip
     this._wirePianoKeys();
+
+    // Drag handling across the whole grid
+    this.container.addEventListener('mousedown', (e) => this._onMouseDown(e));
+    window.addEventListener('mousemove', (e) => this._onMouseMove(e));
+    window.addEventListener('mouseup', (e) => this._onMouseUp(e));
+    this.container.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this._onRightClick(e);
+    });
   }
+
+  // ---- Grid rendering ----
 
   render() {
     if (!this.container) return;
@@ -54,15 +77,7 @@ class PianoRoll {
         cell.dataset.pitch = pitch;
         cell.dataset.step = step;
 
-        if (track.pianoGrid[pitch] && track.pianoGrid[pitch][step]) {
-          cell.classList.add('active');
-        }
-
-        cell.addEventListener('mousedown', (e) => {
-          if (e.buttons === 1) {
-            this._toggleNote(pitch, step, cell);
-          }
-        });
+        this._applyCellState(cell, pitch, step);
 
         this.gridElements[pitch][step] = cell;
         row.appendChild(cell);
@@ -72,19 +87,148 @@ class PianoRoll {
     }
   }
 
-  _toggleNote(pitch, step, cell) {
-    const track = this.engine.tracks[this.activeTrackIndex];
-    if (!track) return;
+  // Set the visual classes of one cell based on the note data.
+  // States: 'empty' | 'head' | 'tail' (tail = note covers this cell but starts earlier).
+  _applyCellState(cell, pitch, step) {
+    const grid = this.engine.tracks[this.activeTrackIndex].pianoGrid;
+    cell.classList.remove('active', 'tail');
 
-    const isActive = !track.pianoGrid[pitch][step];
-    track.pianoGrid[pitch][step] = isActive;
-    cell.classList.toggle('active', isActive);
-
-    // Play preview note when adding a note
-    if (isActive) {
-      const midi = 71 - pitch; // pitch 0 = MIDI 71 (B4)
-      this.engine.playSynthNote(this.activeTrackIndex, midi, null, 0.2);
+    if (grid[pitch] && grid[pitch][step] > 0) {
+      cell.classList.add('active');
+      return;
     }
+
+    // Is this cell covered by a note starting earlier in the same row?
+    for (let s = step - 1; s >= 0; s--) {
+      const len = grid[pitch] && grid[pitch][s];
+      if (len > 0) {
+        if (s + len > step) {
+          cell.classList.add('tail');
+        }
+        break;
+      }
+    }
+  }
+
+  // ---- Interaction ----
+
+  _onMouseDown(e) {
+    if (e.button !== 0) return; // left button only
+    const cell = this._cellFromEvent(e);
+    if (!cell) return;
+    e.preventDefault();
+
+    const pitch = parseInt(cell.dataset.pitch, 10);
+    const step = parseInt(cell.dataset.step, 10);
+    const grid = this.engine.tracks[this.activeTrackIndex].pianoGrid;
+
+    if (grid[pitch][step] > 0) {
+      // Note head: right-half click resizes, otherwise erase on mouseup.
+      const cellRect = cell.getBoundingClientRect();
+      const inRightHalf = (e.clientX - cellRect.left) > cellRect.width / 2;
+      this._drag = { pitch, startStep: step, mode: inRightHalf ? 'resize' : 'erase', noteLength: grid[pitch][step] };
+    } else {
+      // Empty cell: start drawing a note from this step.
+      grid[pitch][step] = 1;
+      this._drag = { pitch, startStep: step, mode: 'draw', noteLength: 1 };
+      this._refreshCell(pitch, step);
+      this._previewNote(pitch);
+    }
+  }
+
+  _onMouseMove(e) {
+    if (!this._drag) return;
+    const cell = this._cellFromEvent(e);
+    if (!cell) return;
+
+    const pitch = parseInt(cell.dataset.pitch, 10);
+    const step = parseInt(cell.dataset.step, 10);
+    const drag = this._drag;
+    const grid = this.engine.tracks[this.activeTrackIndex].pianoGrid;
+
+    if (drag.mode === 'erase') {
+      // Erasing while dragging over a note head
+      if (pitch === drag.pitch && grid[pitch][step] > 0) {
+        this._eraseNote(pitch, step);
+        drag.mode = 'draw'; // continue drawing? No - erase only the clicked note. Keep simple.
+        this._drag = null;
+      }
+      return;
+    }
+
+    if (drag.mode === 'resize') {
+      if (pitch !== drag.pitch) return;
+      const minStep = drag.startStep;
+      // Extend from startStep to the current step (clamp to grid)
+      const endStep = Math.max(minStep, Math.min(15, step));
+      const newLength = endStep - minStep + 1;
+      if (newLength !== drag.noteLength) {
+        drag.noteLength = newLength;
+        grid[drag.pitch][drag.startStep] = newLength;
+        this._refreshCell(drag.pitch, drag.startStep);
+        for (let s = minStep; s <= endStep; s++) this._refreshCell(drag.pitch, s);
+      }
+      return;
+    }
+
+    if (drag.mode === 'draw') {
+      if (pitch !== drag.pitch) return;
+      const endStep = Math.max(drag.startStep, Math.min(15, step));
+      const newLength = endStep - drag.startStep + 1;
+      // Clear any tails extending beyond (keep only contiguous from startStep)
+      grid[drag.pitch][drag.startStep] = newLength;
+      for (let s = 0; s < 16; s++) {
+        if (s !== drag.startStep) {
+          grid[drag.pitch][s] = 0;
+        }
+      }
+      for (let s = 0; s < 16; s++) this._refreshCell(drag.pitch, s);
+    }
+  }
+
+  _onMouseUp(e) {
+    if (!this._drag) return;
+    const drag = this._drag;
+
+    if (drag.mode === 'erase') {
+      // Click without drag on a note head -> erase it
+      this._eraseNote(drag.pitch, drag.startStep);
+    }
+
+    this._drag = null;
+  }
+
+  _onRightClick(e) {
+    const cell = this._cellFromEvent(e);
+    if (!cell) return;
+    const pitch = parseInt(cell.dataset.pitch, 10);
+    const step = parseInt(cell.dataset.step, 10);
+    if (this.engine.tracks[this.activeTrackIndex].pianoGrid[pitch][step] > 0) {
+      this._eraseNote(pitch, step);
+    }
+  }
+
+  _cellFromEvent(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    return el && el.classList.contains('pr-cell') ? el : null;
+  }
+
+  _refreshCell(pitch, step) {
+    const cell = this.gridElements[pitch] && this.gridElements[pitch][step];
+    if (cell) this._applyCellState(cell, pitch, step);
+  }
+
+  _eraseNote(pitch, step) {
+    const grid = this.engine.tracks[this.activeTrackIndex].pianoGrid;
+    if (!grid[pitch] || grid[pitch][step] === 0) return;
+    grid[pitch][step] = 0;
+    // Refresh the whole row in case a tail depended on this note
+    for (let s = 0; s < 16; s++) this._refreshCell(pitch, s);
+  }
+
+  _previewNote(pitch) {
+    const midi = 71 - pitch; // pitch 0 = MIDI 71 (B4)
+    this.engine.playSynthNote(this.activeTrackIndex, midi, null, 0.2);
   }
 
   _wirePianoKeys() {

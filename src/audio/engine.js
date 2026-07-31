@@ -49,8 +49,10 @@ class AudioEngine {
   }
 
   _createPianoGrid() {
-    // 24 pitch rows (0..23, 0 = B4/MIDI 71, 23 = C3/MIDI 48) x 16 steps
-    return Array.from({ length: 24 }, () => new Array(16).fill(false));
+    // 24 pitch rows (0..23, 0 = B4/MIDI 71, 23 = C3/MIDI 48) x 16 steps.
+    // Each cell holds the note length in steps (0 = no note). The note is
+    // triggered at its head cell only; the tail is visual.
+    return Array.from({ length: 24 }, () => new Array(16).fill(0));
   }
 
   midiToFreq(midi) {
@@ -232,11 +234,12 @@ class AudioEngine {
     // 2) Synth note playback (if piano grid has notes on this step)
     if (track.pianoGrid) {
       const step = this.stepIndex;
-      const noteDuration = this.stepDuration * 0.85;
       for (let pitch = 0; pitch < 24; pitch++) {
-        if (track.pianoGrid[pitch][step]) {
+        const lengthSteps = track.pianoGrid[pitch][step];
+        if (lengthSteps) {
           // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
           const midi = 71 - pitch;
+          const noteDuration = this.stepDuration * lengthSteps * 0.85;
           this.playSynthNote(trackIndex, midi, time, noteDuration);
         }
       }
@@ -348,7 +351,9 @@ class AudioEngine {
       if (Array.isArray(saved.pianoGrid)) {
         for (let p = 0; p < 24; p++) {
           for (let s = 0; s < 16; s++) {
-            track.pianoGrid[p][s] = !!(saved.pianoGrid[p] && saved.pianoGrid[p][s]);
+            // Keep numeric length (0 = empty). Old saves stored booleans.
+            const v = saved.pianoGrid[p] && saved.pianoGrid[p][s];
+            track.pianoGrid[p][s] = v ? (typeof v === 'number' ? v : 1) : 0;
           }
         }
       }

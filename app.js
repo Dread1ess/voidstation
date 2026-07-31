@@ -22,10 +22,13 @@ for (let b = 0; b < BARS; b++) {
 }
 
 /* ---------- lanes, one per track ---------- */
-document.querySelectorAll('.track-row').forEach((row) => {
+document.querySelectorAll('.track-row').forEach((row, i) => {
   const lane = document.createElement('div');
   lane.className = 'lane';
   lane.style.setProperty('--lane-c', row.dataset.color);
+  // Pin lanes to rows 1..6 so they stay as row backgrounds behind the
+  // piano-roll grid instead of extending the grid with extra auto rows.
+  lane.style.gridRow = String(i + 1);
   piano.appendChild(lane);
 });
 
