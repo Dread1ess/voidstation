@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOIDSTATION — Project</title>
+<meta name="theme-color" content="#2a2d33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2334373e'/%3E%3Cpath d='M6 4l6 4-6 4z' fill='%2300d9d0'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ TRANSPORT ============ -->
+  <header class="transport">
+    <div class="t-group t-brand">
+      <div class="brand-mark"><span class="brand-glyph"></span></div>
+      <div class="brand-text">
+        <span class="brand-name">VOIDSTATION</span>
+        <span class="brand-project">untitled.flp</span>
+      </div>
+    </div>
+
+    <div class="t-group t-controls">
+      <button class="btn btn-icon active" id="btn-play" title="Play">
+        <svg width="12" height="14" viewBox="0 0 12 14"><path d="M0 0 L12 7 L0 14 Z" fill="currentColor"/></svg>
+      </button>
+      <button class="btn btn-icon" id="btn-stop" title="Stop">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect width="12" height="12" rx="1.5" fill="currentColor"/></svg>
+      </button>
+      <button class="btn btn-icon" id="btn-rec" title="Record">
+        <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <div class="t-group t-readouts">
+      <div class="readout">
+        <span class="readout-label">BPM</span>
+        <span class="readout-value mono">124.000</span>
+      </div>
+      <div class="readout">
+        <span class="readout-label">TIME</span>
+        <span class="readout-value mono">00:01:32.5</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ WORK AREA ============ -->
+  <main class="workarea">
+
+    <!-- TRACK LIST -->
+    <aside class="tracklist">
+      <div class="tracklist-header">Tracks</div>
+
+      <div class="track-row" data-color="#6b4550">
+        <div class="track-plate" style="background:#6b4550"></div>
+        <div class="track-meta">
+          <span class="track-name">Drums</span>
+          <span class="track-instr">FPC · CH 01</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+
+      <div class="track-row" data-color="#4a5568">
+        <div class="track-plate" style="background:#4a5568"></div>
+        <div class="track-meta">
+          <span class="track-name">Bass</span>
+          <span class="track-instr">Sytrus · CH 02</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+
+      <div class="track-row" data-color="#5c5a3f">
+        <div class="track-plate" style="background:#5c5a3f"></div>
+        <div class="track-meta">
+          <span class="track-name">Synth</span>
+          <span class="track-instr">GMS · CH 03</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn active-mute" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+
+      <div class="track-row" data-color="#5b4a5e">
+        <div class="track-plate" style="background:#5b4a5e"></div>
+        <div class="track-meta">
+          <span class="track-name">Lead</span>
+          <span class="track-instr">3xOsc · CH 04</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+
+      <div class="track-row" data-color="#4a5b55">
+        <div class="track-plate" style="background:#4a5b55"></div>
+        <div class="track-meta">
+          <span class="track-name">Pads</span>
+          <span class="track-instr">Harmor · CH 05</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+
+      <div class="track-row" data-color="#6b5a4a">
+        <div class="track-plate" style="background:#6b5a4a"></div>
+        <div class="track-meta">
+          <span class="track-name">FX</span>
+          <span class="track-instr">FLEX · CH 06</span>
+        </div>
+        <div class="track-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn" data-solo title="Solo">S</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- TIMELINE / PIANO ROLL -->
+    <section class="timeline">
+      <div class="timeline-inner">
+        <div class="ruler" id="ruler">
+          <div class="corner"></div>
+        </div>
+        <div class="piano-roll" id="piano">
+          <div class="keys" id="keys"></div>
+          <div class="playhead" id="playhead">
+            <div class="playhead-handle"></div>
+            <div class="playhead-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ MIXER ============ -->
+  <footer class="mixer">
+    <div class="mixer-label">MIXER</div>
+
+    <div class="channel selected" data-name="Kick">
+      <div class="channel-head">
+        <div class="knob" style="--deg:-30deg" title="Pan"></div>
+        <div class="led"></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="height:46%"></div></div>
+      <div class="fader" style="--level:.45"><div class="fader-cap" style="top:23px"></div></div>
+      <div class="channel-foot">
+        <span class="channel-name">Kick</span>
+        <button class="mini-btn" data-mute title="Mute">M</button>
+      </div>
+    </div>
+
+    <div class="channel" data-name="Snare">
+      <div class="channel-head">
+        <div class="knob" style="--deg:22deg" title="Pan"></div>
+        <div class="led"></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="height:68%"></div></div>
+      <div class="fader" style="--level:.62"><div class="fader-cap" style="top:32px"></div></div>
+      <div class="channel-foot">
+        <span class="channel-name">Snare</span>
+        <button class="mini-btn" data-mute title="Mute">M</button>
+      </div>
+    </div>
+
+    <div class="channel" data-name="Bass">
+      <div class="channel-head">
+        <div class="knob" style="--deg:-45deg" title="Pan"></div>
+        <div class="led"></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="height:30%"></div></div>
+      <div class="fader" style="--level:.28"><div class="fader-cap" style="top:14px"></div></div>
+      <div class="channel-foot">
+        <span class="channel-name">Bass</span>
+        <button class="mini-btn" data-mute title="Mute">M</button>
+      </div>
+    </div>
+
+    <div class="channel" data-name="Synth">
+      <div class="channel-head">
+        <div class="knob" style="--deg:40deg" title="Pan"></div>
+        <div class="led"></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="height:55%"></div></div>
+      <div class="fader" style="--level:.5"><div class="fader-cap" style="top:26px"></div></div>
+      <div class="channel-foot">
+        <span class="channel-name">Synth</span>
+        <button class="mini-btn" data-mute title="Mute">M</button>
+      </div>
+    </div>
+  </footer>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
