@@ -1,7 +1,8 @@
-// Entry point: wires the transport UI to the audio engine.
-// Classic script (loaded after src/audio/engine.js), works over file:// too.
+// Entry point: wires the transport, step sequencer, and audio engine.
+// Classic script (loaded after src/audio/engine.js, src/sequencer.js), works over file:// too.
 
 const engine = new window.AudioEngine();
+const sequencer = new window.StepSequencer(engine);
 
 const fileInput = document.getElementById('file-input');
 const btnLoad = document.getElementById('btn-load');
@@ -11,6 +12,12 @@ const btnRec = document.getElementById('btn-rec');
 const bpmInput = document.getElementById('bpm-input');
 const sampleName = document.getElementById('sample-name');
 const dropOverlay = document.getElementById('drop-overlay');
+
+// Track mapping: 0 = Kick, 1 = Snare
+let currentTrack = 0; // 0 = Kick, 1 = Snare
+
+// Initialize step sequencer UI
+sequencer.mount(document.getElementById('step-sequencer'));
 
 function syncButtons() {
   btnPlay.classList.toggle('active', engine.isPlaying);
@@ -22,11 +29,17 @@ function setStatus(message, isError = false) {
   sampleName.classList.toggle('loaded', !isError && message !== 'no sample');
 }
 
-async function loadSample(file) {
+function setCurrentTrack(index) {
+  currentTrack = index;
+  // Visual feedback: could highlight track selector later
+}
+
+async function loadSample(file, trackIndex = currentTrack) {
   if (!file) return;
   try {
-    await engine.loadSample(file);
-    setStatus(file.name);
+    await engine.loadSample(file, trackIndex);
+    const track = engine.tracks[trackIndex];
+    setStatus(`${track.name}: ${file.name}`);
   } catch (err) {
     console.error('Failed to load sample:', err);
     setStatus('could not load sample', true);
@@ -61,27 +74,27 @@ window.addEventListener('drop', (e) => {
   if (file) loadSample(file);
 });
 
-// --- transport: play / stop ---
+// --- transport: start/stop transport (sequencer) ---
 btnPlay.addEventListener('click', () => {
   if (!engine.hasSample) {
     setStatus('load a sample first', true);
     return;
   }
-  engine.play();
+  engine.startTransport();
 });
 
 btnStop.addEventListener('click', () => {
-  engine.stop();
+  engine.stopTransport();
 });
 
 btnRec.addEventListener('click', () => {
   btnRec.classList.toggle('active');
 });
 
-engine.onStateChange = syncButtons;
+engine.onStateChange(syncButtons);
 syncButtons();
 
-// --- BPM (number only for now, no sync) ---
+// --- BPM ---
 bpmInput.addEventListener('change', () => {
   const value = parseFloat(bpmInput.value);
   if (Number.isFinite(value) && value > 0) {
@@ -91,3 +104,14 @@ bpmInput.addEventListener('change', () => {
     bpmInput.value = engine.bpm.toFixed(3);
   }
 });
+
+// Track selector buttons (Kick/Snare) - could be added to UI later
+// For now, keyboard shortcuts: 1 = Kick, 2 = Snare
+window.addEventListener('keydown', (e) => {
+  if (e.key === '1') { setCurrentTrack(0); setStatus('Track: Kick'); }
+  else if (e.key === '2') { setCurrentTrack(1); setStatus('Track: Snare'); }
+});
+
+// Expose for testing/debugging
+window.engine = engine;
+window.sequencer = sequencer;

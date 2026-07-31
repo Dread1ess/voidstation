@@ -276,20 +276,22 @@ body {
 .timeline::-webkit-scrollbar { height: 10px; width: 10px; }
 .timeline::-webkit-scrollbar-track { background: #23262b; }
 .timeline::-webkit-scrollbar-thumb { background: #454952; border-radius: 5px; border: 2px solid #23262b; }
-
 .timeline-inner {
   position: relative;
   width: calc(var(--bars) * var(--beat-w) * 4);
+  display: flex;
+  flex-direction: column;
 }
 
 .corner {
-  position: sticky; left: 0;
-  z-index: 3;
+  position: sticky; left: 0; top: 0;
+  z-index: 8;
   flex: none;
   width: var(--keys-w);
-  height: 100%;
+  height: var(--ruler-h);
   background: linear-gradient(to bottom, #3b3f47, #33363d);
   border-right: 1px solid var(--edge);
+  border-bottom: 1px solid var(--edge);
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -302,15 +304,16 @@ body {
   border-bottom: 1px solid var(--edge);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-.ruler-tick {
+
+.step-sequencer-container {
   flex: none;
-  height: 100%;
-  display: flex; align-items: center;
-  padding-left: 6px;
-  border-left: 1px solid var(--edge-light);
-  background-image: repeating-linear-gradient(to right, transparent 0 39px, var(--line-beat) 39px 40px);
-  font-size: 10px; color: var(--text-dim);
-  font-family: var(--mono); letter-spacing: 0.05em;
+  height: 112px; /* header + 2 rows * 32px + padding */
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0 0;
+  border-bottom: 1px solid var(--edge);
+  background: var(--panel-2);
+  border-right: 1px solid var(--edge);
 }
 
 .piano-roll {
@@ -383,6 +386,123 @@ body {
   position: absolute; top: 9px; bottom: 0; left: -1px;
   width: 2px;
   background: linear-gradient(to bottom, var(--accent), var(--accent-fade) 85%);
+}
+
+/* ============================================================
+   STEP SEQUENCER
+   ============================================================ */
+
+.step-sequencer-container {
+  grid-column: 2;
+  grid-row: 1 / 7;
+  display: flex;
+  align-items: start;
+  padding-top: 4px;
+}
+
+.step-sequencer {
+  display: grid;
+  grid-template-columns: 72px repeat(16, 40px);
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  padding: 8px 8px 8px 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.seq-header {
+  display: contents;
+}
+
+.seq-track-label {
+  grid-column: 1;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.seq-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text-faint);
+}
+
+.seq-row {
+  display: contents;
+}
+
+.seq-track-name {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 32px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.seq-step {
+  grid-column: auto;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #2f3238, #26292e);
+  cursor: pointer;
+  transition: background 80ms ease, border-color 80ms ease, transform 50ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.seq-step:hover {
+  border-color: var(--accent);
+  background: linear-gradient(to bottom, #3a3e46, #303339);
+}
+.seq-step:active {
+  transform: scale(0.96);
+}
+.seq-step.active {
+  background: linear-gradient(to bottom, #2a7a4a, #1e5a36);
+  border-color: #3a9a5a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.seq-step.playing {
+  box-shadow: 0 0 0 2px var(--accent), inset 0 0 8px rgba(0, 217, 208, 0.3);
+  z-index: 2;
+}
+
+/* Responsive: smaller steps on narrow screens */
+@media (max-width: 940px) {
+  .step-sequencer {
+    grid-template-columns: 60px repeat(16, 32px);
+    gap: 1px;
+  }
+  .seq-step { width: 24px; height: 24px; }
+  .seq-track-label { font-size: 8px; }
+  .seq-step-num { font-size: 8px; }
+}
+
+@media (max-width: 720px) {
+  .step-sequencer-container {
+    grid-column: 1 / 3;
+    grid-row: 7;
+    margin-top: 8px;
+  }
+  .step-sequencer {
+    grid-template-columns: 54px repeat(16, 28px);
+    overflow-x: auto;
+  }
 }
 
 /* ============================================================
