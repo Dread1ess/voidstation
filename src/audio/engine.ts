@@ -2,7 +2,8 @@
 // ESM module. Exposes the class via export; also kept on window during the
 // migration so the classic entry (main.js) can still construct it.
 
-import type { Track, Pattern, PatternTrackData, WaveformType, AdsrParams, ProjectState, TrackSettings } from '../types.js';
+import type { Track, Pattern, PatternTrackData, WaveformType, AdsrParams, ProjectState, TrackSettings, TrackEffect, EffectHandle, ReverbPreset } from '../types.js';
+import { createEffect, createReverbEffect, createDelayEffect, createEqEffect } from '../types.js';
 
 // Project shape that deserialize() accepts: v2 (current) plus the old v1
 // shape that kept pattern/pianoGrid directly on the track entries.
@@ -22,6 +23,12 @@ export class AudioEngine {
   private _stateListeners: (() => void)[] = [];
   private _stepListeners: (() => void)[] = [];
   private _patternListeners: (() => void)[] = [];
+  // Live insert-effect graphs per track: all nodes (for disconnect) plus
+  // per-effect handles (for cheap in-place param updates during a drag).
+  private _fxGraphs = new Map<number, { nodes: AudioNode[]; handles: Map<number, EffectHandle> }>();
+  // Impulse response cache per track+preset (keyed with the sample rate so the
+  // offline renderer never reuses an IR whose rate differs from its context).
+  private _irCache = new Map<string, AudioBuffer>();
 
   // Transport state
   transportTime = 0;          // current position in seconds
@@ -30,13 +37,14 @@ export class AudioEngine {
   lookahead = 0.1;            // schedule 100ms ahead
   scheduleInterval = 25;      // scheduler tick every 25ms
 
-  // Tracks: each track has sample, gain, panner, pattern (16 steps), pianoGrid (24x16), mute/solo/volume/pan
+  // Tracks: each track has sample, gain, panner, insert fx chain, pattern
+  // (16 steps), pianoGrid (24x16), mute/solo/volume/pan.
   tracks: Track[] = [
-    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
   ];
   trackCount = 5;
   _activeTrackCount = 5;
@@ -282,9 +290,10 @@ export class AudioEngine {
     const ctx = this.ensureContext();
     if (!ctx) return;
     const track = this.tracks[trackIndex];
-    if (!track || !track.gain) return;
+    const dest = this._voiceDest(track);
+    if (!track || !dest) return;
     const ctxTime = time !== null ? time : ctx.currentTime;
-    this._buildSynthVoice(ctx, track, track.gain, midiNote, ctxTime, duration);
+    this._buildSynthVoice(ctx, track, dest, midiNote, ctxTime, duration);
   }
 
   // Build a synth voice (oscillator / noise + ADSR envelope) in the given
@@ -364,14 +373,15 @@ export class AudioEngine {
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.8;
       this.master.connect(this.ctx.destination);
-      // Create per-track gain + pan nodes
-      this.tracks.forEach(t => {
+      // Create per-track gain + pan nodes, then the insert effect chains
+      this.tracks.forEach((t, i) => {
         t.gain = this.ctx!.createGain();
         t.gain!.gain.value = t.volume;
         t.panner = this.ctx!.createStereoPanner();
         t.panner.pan.value = t.pan;
         t.gain!.connect(t.panner);
         t.panner.connect(this.master!);
+        this._rebuildFxChain(i);
       });
     }
     if (this.ctx.state === 'suspended') {
@@ -463,6 +473,226 @@ export class AudioEngine {
     if (track.panner) track.panner.pan.value = track.pan;
   }
 
+  // --- Insert effects (per-track chain: reverb / delay / EQ) ---
+
+  // Destination node for a track's voices: the top of the insert chain when
+  // one exists, otherwise the track gain (bypass).
+  _voiceDest(track: Track): GainNode | null {
+    return track.fxIn ?? track.gain;
+  }
+
+  // Synthesize a short low-passed noise burst as a stereo impulse response.
+  _generateImpulse(ctx: BaseAudioContext, preset: ReverbPreset): AudioBuffer {
+    const sr = ctx.sampleRate;
+    const seconds = preset === 'room' ? 0.7 : preset === 'hall' ? 2.5 : 1.4;
+    const len = Math.round(sr * seconds);
+    const buf = ctx.createBuffer(2, len, sr);
+    // Room dies fast, hall decays slowly, plate rings bright.
+    const decay = preset === 'room' ? 6 : preset === 'hall' ? 3.5 : 8;
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      let lp = 0;
+      for (let i = 0; i < len; i++) {
+        lp = lp * 0.75 + (Math.random() * 2 - 1) * 0.25;
+        d[i] = lp * Math.pow(1 - i / len, decay);
+      }
+    }
+    return buf;
+  }
+
+  _impulseFor(trackIndex: number, ctx: BaseAudioContext, preset: ReverbPreset): AudioBuffer {
+    const key = `${trackIndex}:${preset}:${ctx.sampleRate}`;
+    let buf = this._irCache.get(key);
+    if (!buf) {
+      buf = this._generateImpulse(ctx, preset);
+      this._irCache.set(key, buf);
+    }
+    return buf;
+  }
+
+  // Build one effect's node group in series after `prev`. Returns the group's
+  // output node, all created nodes (for disconnect) and a typed handle (used
+  // by the live graph for in-place param updates; ignored offline).
+  private _buildEffectNodes(
+    ctx: BaseAudioContext,
+    trackIndex: number,
+    prev: AudioNode,
+    fx: TrackEffect
+  ): { out: AudioNode; nodes: AudioNode[]; handle: EffectHandle } {
+    const clampMix = (m: number) => Math.max(0, Math.min(1, m));
+    if (fx.type === 'reverb') {
+      const dry = ctx.createGain();
+      const wet = ctx.createGain();
+      const conv = ctx.createConvolver();
+      const out = ctx.createGain();
+      conv.buffer = this._impulseFor(trackIndex, ctx, fx.preset);
+      dry.gain.value = clampMix(1 - fx.mix);
+      wet.gain.value = clampMix(fx.mix);
+      prev.connect(dry);
+      prev.connect(conv);
+      conv.connect(wet);
+      dry.connect(out);
+      wet.connect(out);
+      return { out, nodes: [dry, wet, conv, out], handle: { kind: 'reverb', dry, wet, conv } };
+    }
+    if (fx.type === 'delay') {
+      const dry = ctx.createGain();
+      const wet = ctx.createGain();
+      const dl = ctx.createDelay(1.5);
+      const fb = ctx.createGain();
+      const out = ctx.createGain();
+      dry.gain.value = clampMix(1 - fx.mix);
+      wet.gain.value = clampMix(fx.mix);
+      dl.delayTime.value = Math.max(0.02, Math.min(1.4, fx.time));
+      fb.gain.value = Math.max(0, Math.min(0.95, fx.feedback));
+      prev.connect(dry);
+      prev.connect(dl);
+      dl.connect(fb);
+      fb.connect(dl); // feedback loop
+      dl.connect(wet);
+      dry.connect(out);
+      wet.connect(out);
+      return { out, nodes: [dry, dl, fb, wet, out], handle: { kind: 'delay', dry, wet, delay: dl, feedback: fb } };
+    }
+    // EQ (3-band)
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowshelf';
+    low.frequency.value = 250;
+    low.gain.value = Math.max(-15, Math.min(15, fx.low));
+    const mid = ctx.createBiquadFilter();
+    mid.type = 'peaking';
+    mid.frequency.value = 1000;
+    mid.Q.value = 0.9;
+    mid.gain.value = Math.max(-15, Math.min(15, fx.mid));
+    const high = ctx.createBiquadFilter();
+    high.type = 'highshelf';
+    high.frequency.value = 4000;
+    high.gain.value = Math.max(-15, Math.min(15, fx.high));
+    prev.connect(low);
+    low.connect(mid);
+    mid.connect(high);
+    return { out: high, nodes: [low, mid, high], handle: { kind: 'eq', low, mid, high } };
+  }
+
+  // Rebuild the live insert chain for one track from its enabled effects and
+  // rewire it so voices flow through it before the track fader. When nothing
+  // is enabled, voices go straight to the gain node.
+  _rebuildFxChain(trackIndex: number) {
+    const track = this.tracks[trackIndex];
+    if (!track || !this.ctx || !track.gain) return;
+    track.fxNodes.forEach(n => { try { n.disconnect(); } catch { /* already gone */ } });
+    track.fxNodes = [];
+    track.fxIn = null;
+    track.fxOut = null;
+    this._fxGraphs.delete(trackIndex);
+
+    const enabled = track.effects.filter(e => e.enabled);
+    if (!enabled.length) return;
+
+    const inGain = this.ctx.createGain();
+    let prev: AudioNode = inGain;
+    const nodes: AudioNode[] = [inGain];
+    const handles = new Map<number, EffectHandle>();
+    track.effects.forEach((fx, i) => {
+      if (!fx.enabled) return;
+      const built = this._buildEffectNodes(this.ctx!, trackIndex, prev, fx);
+      prev = built.out;
+      nodes.push(...built.nodes);
+      handles.set(i, built.handle);
+    });
+    track.fxIn = inGain;
+    track.fxOut = prev;
+    track.fxNodes = nodes;
+    this._fxGraphs.set(trackIndex, { nodes, handles });
+    prev.connect(track.gain);
+  }
+
+  _rebuildAllFxChains() {
+    if (!this.ctx) return;
+    this.tracks.forEach((_, i) => this._rebuildFxChain(i));
+  }
+
+  setEffectEnabled(trackIndex: number, effectIndex: number, enabled: boolean) {
+    const track = this.tracks[trackIndex];
+    const fx = track?.effects[effectIndex];
+    if (!track || !fx || fx.enabled === enabled) return;
+    fx.enabled = enabled;
+    this._rebuildFxChain(trackIndex);
+  }
+
+  // Change one effect parameter. Applies to the live chain in place (no
+  // rebuild), so slider drags don't cut the sound. Value is a number
+  // (mix/time/feedback/dB) or a string (reverb preset).
+  setEffectParam(trackIndex: number, effectIndex: number, key: string, value: number | string) {
+    const track = this.tracks[trackIndex];
+    const fx = track?.effects[effectIndex];
+    if (!track || !fx) return;
+    const graph = this._fxGraphs.get(trackIndex);
+    const handle = graph?.handles.get(effectIndex);
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    if (fx.type === 'reverb') {
+      if (key === 'mix') {
+        fx.mix = clamp(Number(value), 0, 1);
+        if (handle && handle.kind === 'reverb') {
+          handle.dry.gain.value = 1 - fx.mix;
+          handle.wet.gain.value = fx.mix;
+        }
+      } else if (key === 'preset') {
+        fx.preset = value as ReverbPreset;
+        if (handle && handle.kind === 'reverb' && this.ctx) {
+          handle.conv.buffer = this._impulseFor(trackIndex, this.ctx, fx.preset);
+        }
+      }
+    } else if (fx.type === 'delay') {
+      if (key === 'time') {
+        fx.time = clamp(Number(value), 0.02, 1.4);
+        if (handle && handle.kind === 'delay') handle.delay.delayTime.value = fx.time;
+      } else if (key === 'feedback') {
+        fx.feedback = clamp(Number(value), 0, 0.95);
+        if (handle && handle.kind === 'delay') handle.feedback.gain.value = fx.feedback;
+      } else if (key === 'mix') {
+        fx.mix = clamp(Number(value), 0, 1);
+        if (handle && handle.kind === 'delay') {
+          handle.dry.gain.value = 1 - fx.mix;
+          handle.wet.gain.value = fx.mix;
+        }
+      }
+    } else if (fx.type === 'eq') {
+      if (key === 'low') {
+        fx.low = clamp(Number(value), -15, 15);
+        if (handle && handle.kind === 'eq') handle.low.gain.value = fx.low;
+      } else if (key === 'mid') {
+        fx.mid = clamp(Number(value), -15, 15);
+        if (handle && handle.kind === 'eq') handle.mid.gain.value = fx.mid;
+      } else if (key === 'high') {
+        fx.high = clamp(Number(value), -15, 15);
+        if (handle && handle.kind === 'eq') handle.high.gain.value = fx.high;
+      }
+    }
+  }
+
+  addEffect(trackIndex: number, type: TrackEffect['type']) {
+    const track = this.tracks[trackIndex];
+    if (!track) return;
+    track.effects.push(createEffect(type));
+    this._rebuildFxChain(trackIndex);
+  }
+
+  removeEffect(trackIndex: number, effectIndex: number) {
+    const track = this.tracks[trackIndex];
+    if (!track || track.effects[effectIndex] === undefined) return;
+    track.effects.splice(effectIndex, 1);
+    this._rebuildFxChain(trackIndex);
+  }
+
+  moveEffect(trackIndex: number, from: number, to: number) {
+    const track = this.tracks[trackIndex];
+    if (!track || from === to || from < 0 || to < 0 || from >= track.effects.length || to >= track.effects.length) return;
+    const [fx] = track.effects.splice(from, 1);
+    track.effects.splice(to, 0, fx);
+    this._rebuildFxChain(trackIndex);
+  }
+
   // Effective per-track gain: volume, scaled by mute/solo routing.
   private _effectiveVolume(trackIndex: number): number {
     const track = this.tracks[trackIndex];
@@ -520,10 +750,11 @@ export class AudioEngine {
     const ctx = this.ensureContext();
     if (!ctx) return;
     const track = this.tracks[trackIndex];
-    if (!track || !track.sample || !track.gain) return;
+    const dest = this._voiceDest(track);
+    if (!track || !track.sample || !dest) return;
     const src = ctx.createBufferSource();
     src.buffer = track.sample;
-    src.connect(track.gain);
+    src.connect(dest);
     const { start, end } = this._sampleBounds(track);
     const begin = Math.min(Math.max(offset, start), end);
     src.start(0, begin, end - begin);
@@ -544,12 +775,15 @@ export class AudioEngine {
     if (!srcData) return; // empty playlist slot -> silence
 
     // 1) Sample playback (if sample loaded and pattern step active)
-    if (track.sample && track.gain && srcData.pattern[this.stepIndex]) {
-      const src = this.ctx!.createBufferSource();
-      src.buffer = track.sample;
-      src.connect(track.gain);
-      const { start, end } = this._sampleBounds(track);
-      src.start(time, start, end - start);
+    if (track.sample && srcData.pattern[this.stepIndex]) {
+      const dest = this._voiceDest(track);
+      if (dest) {
+        const src = this.ctx!.createBufferSource();
+        src.buffer = track.sample;
+        src.connect(dest);
+        const { start, end } = this._sampleBounds(track);
+        src.start(time, start, end - start);
+      }
     }
 
     // 2) Synth note playback (if piano grid has notes on this step)
@@ -646,6 +880,20 @@ export class AudioEngine {
       return g;
     });
 
+    // Mirror the live insert chains: enabled effects sit between the voices
+    // and each track's fader. The returned node is what voices connect to.
+    const trackIns: GainNode[] = this.tracks.map((_, i) => {
+      const enabled = this.tracks[i].effects.filter(e => e.enabled);
+      if (!enabled.length) return trackGains[i];
+      const inGain = offline.createGain();
+      let prev: AudioNode = inGain;
+      for (const fx of enabled) {
+        prev = this._buildEffectNodes(offline, i, prev, fx).out;
+      }
+      prev.connect(trackGains[i]);
+      return inGain;
+    });
+
     for (let barIdx = 0; barIdx < barCount; barIdx++) {
       const bar = barOffset + barIdx;
       for (let step = 0; step < this.stepsPerBar; step++) {
@@ -653,13 +901,15 @@ export class AudioEngine {
         this.tracks.forEach((track, ti) => {
           const gain = trackGains[ti];
           if (!gain || gain.gain.value <= 0) return; // muted / soloed-out / zero volume
+          const dest = trackIns[ti];
+          if (!dest) return;
           const srcData = this._stepSourceForBar(ti, bar);
           if (!srcData) return; // empty playlist slot -> silence
           // 1) Sample playback (if sample loaded and pattern step active)
           if (track.sample && srcData.pattern[step]) {
             const src = offline.createBufferSource();
             src.buffer = track.sample;
-            src.connect(gain);
+            src.connect(dest);
             const { start, end } = this._sampleBounds(track);
             src.start(time, start, end - start);
           }
@@ -671,7 +921,7 @@ export class AudioEngine {
                 // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
                 const midi = 71 - pitch;
                 const noteDuration = this.stepDuration * lengthSteps * 0.85;
-                this._buildSynthVoice(offline, track, gain, midi, time, noteDuration);
+                this._buildSynthVoice(offline, track, dest, midi, time, noteDuration);
               }
             }
           }
@@ -717,6 +967,46 @@ export class AudioEngine {
     return grid;
   }
 
+  // Validate + fill defaults for effects loaded from a saved project.
+  private _sanitizeEffects(saved: unknown): TrackEffect[] {
+    if (!Array.isArray(saved)) return [];
+    const out: TrackEffect[] = [];
+    for (const raw of saved) {
+      if (!raw || typeof raw !== 'object') continue;
+      const e = raw as Partial<TrackEffect> & { type?: string };
+      const has = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+      const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+      if (e.type === 'reverb') {
+        const def = createReverbEffect();
+        out.push({
+          type: 'reverb',
+          enabled: e.enabled !== undefined ? !!e.enabled : def.enabled,
+          preset: (e.preset === 'room' || e.preset === 'hall' || e.preset === 'plate') ? e.preset : def.preset,
+          mix: has(e.mix) ? clamp(e.mix, 0, 1) : def.mix,
+        });
+      } else if (e.type === 'delay') {
+        const def = createDelayEffect();
+        out.push({
+          type: 'delay',
+          enabled: e.enabled !== undefined ? !!e.enabled : def.enabled,
+          time: has(e.time) ? clamp(e.time, 0.02, 1.4) : def.time,
+          feedback: has(e.feedback) ? clamp(e.feedback, 0, 0.95) : def.feedback,
+          mix: has(e.mix) ? clamp(e.mix, 0, 1) : def.mix,
+        });
+      } else if (e.type === 'eq') {
+        const def = createEqEffect();
+        out.push({
+          type: 'eq',
+          enabled: e.enabled !== undefined ? !!e.enabled : def.enabled,
+          low: has(e.low) ? clamp(e.low, -15, 15) : def.low,
+          mid: has(e.mid) ? clamp(e.mid, -15, 15) : def.mid,
+          high: has(e.high) ? clamp(e.high, -15, 15) : def.high,
+        });
+      }
+    }
+    return out;
+  }
+
   // Return a plain JSON-serializable snapshot of the whole project.
   // Note: sample data is stored as base64 inside the snapshot (may be large).
   serialize(): ProjectState {
@@ -735,6 +1025,7 @@ export class AudioEngine {
         pan: t.pan,
         synthType: t.synthType,
         adsr: { ...t.adsr },
+        effects: t.effects.map(e => ({ ...e })),
       })),
       currentPatternIndex: this.currentPatternIndex,
       playlist: [...this.playlist],
@@ -818,6 +1109,8 @@ export class AudioEngine {
           release: saved.adsr.release !== undefined ? saved.adsr.release : track.adsr.release,
         };
       }
+      // Restore per-track insert effects (defaults for missing/partial entries)
+      track.effects = this._sanitizeEffects(saved.effects);
       // Restore sample data (decode base64 -> AudioBuffer)
       track.sample = null;
       track.sampleData = null;
@@ -841,6 +1134,7 @@ export class AudioEngine {
     }
 
     this._rebuildAllGains();
+    this._rebuildAllFxChains();
     this._notifyStateChange();
     this._notifyPatternChange();
   }
@@ -871,6 +1165,7 @@ export class AudioEngine {
       t.solo = false;
       t.pan = 0;
       if (t.panner) t.panner.pan.value = 0;
+      t.effects = [];
       t.noiseBuffer = null;
     });
     this.patterns = [{
@@ -884,6 +1179,7 @@ export class AudioEngine {
     this.loopEnabled = true;
     this._loadPatternIntoLive(0);
     this._rebuildAllGains();
+    this._rebuildAllFxChains();
     this._notifyStateChange();
     this._notifyPatternChange();
   }

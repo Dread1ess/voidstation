@@ -219,7 +219,10 @@
       <div class="fader" style="--level:.45"><div class="fader-cap" style="top:23px"></div></div>
       <div class="channel-foot">
         <span class="channel-name">Kick</span>
-        <button class="mini-btn" data-mute title="Mute">M</button>
+        <div class="channel-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+        </div>
       </div>
     </div>
 
@@ -232,7 +235,10 @@
       <div class="fader" style="--level:.62"><div class="fader-cap" style="top:32px"></div></div>
       <div class="channel-foot">
         <span class="channel-name">Snare</span>
-        <button class="mini-btn" data-mute title="Mute">M</button>
+        <div class="channel-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+        </div>
       </div>
     </div>
 
@@ -245,7 +251,10 @@
       <div class="fader" style="--level:.28"><div class="fader-cap" style="top:14px"></div></div>
       <div class="channel-foot">
         <span class="channel-name">Bass</span>
-        <button class="mini-btn" data-mute title="Mute">M</button>
+        <div class="channel-buttons">
+          <button class="mini-btn" data-mute title="Mute">M</button>
+          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+        </div>
       </div>
     </div>
 
@@ -261,6 +270,7 @@
         <div class="channel-buttons">
           <button class="mini-btn" data-mute title="Mute">M</button>
           <button class="mini-btn" data-solo title="Solo">S</button>
+          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
         </div>
       </div>
     </div>
@@ -277,10 +287,25 @@
         <div class="channel-buttons">
           <button class="mini-btn" data-mute title="Mute">M</button>
           <button class="mini-btn" data-solo title="Solo">S</button>
+          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
         </div>
       </div>
     </div>
   </footer>
+
+  <!-- ============ INSERT FX PANEL ============ -->
+  <div class="fx-panel" id="fx-panel" hidden>
+    <div class="fx-panel-header">
+      <span class="fx-panel-title">INSERT FX · <span id="fx-track-name"></span></span>
+      <button class="mini-btn" id="fx-close" title="Close">×</button>
+    </div>
+    <div class="fx-panel-actions">
+      <button class="mini-btn fx-add-btn" data-fx-add="reverb" title="Add reverb">+ Reverb</button>
+      <button class="mini-btn fx-add-btn" data-fx-add="delay" title="Add delay">+ Delay</button>
+      <button class="mini-btn fx-add-btn" data-fx-add="eq" title="Add 3-band EQ">+ EQ</button>
+    </div>
+    <div class="fx-list" id="fx-list"></div>
+  </div>
 
 </div>
 

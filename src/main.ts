@@ -8,6 +8,7 @@ import { StepSequencer } from './sequencer.js';
 import { PianoRoll } from './pianoRoll.js';
 import { InstrumentPanel } from './instrument.js';
 import { PlaylistBar } from './playlist.js';
+import type { TrackEffect } from './types.js';
 
 const STORAGE_KEY = 'voidstation-project-v1';
 
@@ -300,6 +301,204 @@ channels.forEach((ch, i) => {
   }
 });
 
+// --- Insert FX panel ---
+let fxTrackIndex = 0;
+const fxPanel = document.getElementById('fx-panel') as HTMLElement | null;
+const fxTrackName = document.getElementById('fx-track-name') as HTMLElement | null;
+const fxList = document.getElementById('fx-list') as HTMLElement | null;
+const fxClose = document.getElementById('fx-close') as HTMLButtonElement | null;
+
+function updateFxButtons() {
+  document.querySelectorAll<HTMLElement>('.fx-btn').forEach((btn, i) => {
+    btn.classList.toggle('active-fx', engine.tracks[i]?.effects.some(e => e.enabled) ?? false);
+  });
+}
+
+function formatFxValue(key: string, v: number) {
+  if (key === 'low' || key === 'mid' || key === 'high') return `${v > 0 ? '+' : ''}${v.toFixed(0)} dB`;
+  return v.toFixed(2);
+}
+
+function fxParamMeta(fx: TrackEffect): { key: string; label: string; min: number; max: number; step: number; value: number }[] {
+  if (fx.type === 'reverb') {
+    return [{ key: 'mix', label: 'MIX', min: 0, max: 1, step: 0.01, value: fx.mix }];
+  }
+  if (fx.type === 'delay') {
+    return [
+      { key: 'time', label: 'TIME', min: 0.02, max: 1.4, step: 0.01, value: fx.time },
+      { key: 'feedback', label: 'FDBK', min: 0, max: 0.95, step: 0.01, value: fx.feedback },
+      { key: 'mix', label: 'MIX', min: 0, max: 1, step: 0.01, value: fx.mix },
+    ];
+  }
+  return [
+    { key: 'low', label: 'LOW', min: -15, max: 15, step: 1, value: fx.low },
+    { key: 'mid', label: 'MID', min: -15, max: 15, step: 1, value: fx.mid },
+    { key: 'high', label: 'HIGH', min: -15, max: 15, step: 1, value: fx.high },
+  ];
+}
+
+function openFxPanel(trackIndex: number) {
+  if (!fxPanel) return;
+  fxTrackIndex = trackIndex;
+  if (fxTrackName) fxTrackName.textContent = engine.tracks[trackIndex]?.name ?? '';
+  if (mixer) {
+    const r = mixer.getBoundingClientRect();
+    fxPanel.style.bottom = `${Math.max(8, window.innerHeight - r.top + 12)}px`;
+  }
+  fxPanel.hidden = false;
+  renderFxList();
+}
+
+function closeFxPanel() {
+  if (fxPanel) fxPanel.hidden = true;
+}
+
+function renderFxList() {
+  if (!fxList) return;
+  const effects = engine.tracks[fxTrackIndex]?.effects ?? [];
+  if (!effects.length) {
+    fxList.innerHTML = '<div class="fx-empty">No insert effects on this track.</div>';
+    updateFxButtons();
+    return;
+  }
+  fxList.innerHTML = effects.map((fx, i) => {
+    const params = fxParamMeta(fx);
+    const sliders = params.map(p => `
+      <label class="fx-param">
+        <span class="fx-param-label">${p.label}</span>
+        <input type="range" data-fx-param="${i}:${p.key}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.value}">
+        <span class="fx-param-val" data-fx-val="${i}:${p.key}">${formatFxValue(p.key, p.value)}</span>
+      </label>`).join('');
+    const preset = fx.type === 'reverb' ? `
+      <select class="fx-preset" data-fx-preset="${i}" title="Reverb preset">
+        <option value="room"${fx.preset === 'room' ? ' selected' : ''}>Room</option>
+        <option value="hall"${fx.preset === 'hall' ? ' selected' : ''}>Hall</option>
+        <option value="plate"${fx.preset === 'plate' ? ' selected' : ''}>Plate</option>
+      </select>` : '';
+    return `
+      <div class="fx-row${fx.enabled ? '' : ' fx-disabled'}">
+        <div class="fx-row-head">
+          <label class="fx-enable-label">
+            <input type="checkbox" class="fx-enable" data-fx-enable="${i}"${fx.enabled ? ' checked' : ''}>
+            <span class="fx-type-name">${fx.type.toUpperCase()}${fx.type === 'eq' ? ' 3-BAND' : ''}</span>
+          </label>
+          ${preset}
+          <span class="fx-spacer"></span>
+          <button class="mini-btn" data-fx-up="${i}" title="Move up">▲</button>
+          <button class="mini-btn" data-fx-down="${i}" title="Move down">▼</button>
+          <button class="mini-btn" data-fx-remove="${i}" title="Remove">×</button>
+        </div>
+        <div class="fx-sliders">${sliders}</div>
+      </div>`;
+  }).join('');
+  updateFxButtons();
+}
+
+document.querySelectorAll<HTMLElement>('.fx-btn').forEach((btn, i) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openFxPanel(i);
+    highlightCurrentTrack(i);
+    setStatus(`FX: ${engine.tracks[i].name}`);
+  });
+});
+
+document.querySelectorAll<HTMLElement>('.fx-add-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = (btn.dataset.fxAdd || 'reverb') as TrackEffect['type'];
+    engine.beginHistory();
+    engine.addEffect(fxTrackIndex, type);
+    engine.commitHistory();
+    renderFxList();
+  });
+});
+
+fxClose?.addEventListener('click', closeFxPanel);
+
+// Delegated events inside the effect list (add/remove/reorder/params).
+if (fxList) {
+  fxList.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const up = target.closest<HTMLElement>('[data-fx-up]');
+    const down = target.closest<HTMLElement>('[data-fx-down]');
+    const remove = target.closest<HTMLElement>('[data-fx-remove]');
+    if (up) {
+      const i = Number(up.dataset.fxUp);
+      engine.beginHistory();
+      engine.moveEffect(fxTrackIndex, i, i - 1);
+      engine.commitHistory();
+      renderFxList();
+    } else if (down) {
+      const i = Number(down.dataset.fxDown);
+      engine.beginHistory();
+      engine.moveEffect(fxTrackIndex, i, i + 1);
+      engine.commitHistory();
+      renderFxList();
+    } else if (remove) {
+      const i = Number(remove.dataset.fxRemove);
+      engine.beginHistory();
+      engine.removeEffect(fxTrackIndex, i);
+      engine.commitHistory();
+      renderFxList();
+    }
+  });
+
+  fxList.addEventListener('change', (e) => {
+    const target = e.target as HTMLElement;
+    const enable = target.closest<HTMLInputElement>('.fx-enable');
+    if (enable) {
+      const i = Number(enable.dataset.fxEnable);
+      engine.beginHistory();
+      engine.setEffectEnabled(fxTrackIndex, i, enable.checked);
+      engine.commitHistory();
+      renderFxList();
+      return;
+    }
+    const preset = target.closest<HTMLSelectElement>('[data-fx-preset]');
+    if (preset) {
+      const i = Number(preset.dataset.fxPreset);
+      engine.beginHistory();
+      engine.setEffectParam(fxTrackIndex, i, 'preset', preset.value);
+      engine.commitHistory();
+    }
+  });
+
+  // Range sliders: live param update, single undo entry per drag.
+  fxList.addEventListener('input', (e) => {
+    const target = e.target as HTMLInputElement;
+    const param = target.dataset.fxParam;
+    if (!param) return;
+    const colon = param.indexOf(':');
+    const idx = Number(param.slice(0, colon));
+    const key = param.slice(colon + 1);
+    const val = parseFloat(target.value);
+    if (!(target as { _fxGesture?: boolean })._fxGesture) {
+      (target as { _fxGesture?: boolean })._fxGesture = true;
+      engine.beginHistory();
+    }
+    engine.setEffectParam(fxTrackIndex, idx, key, val);
+    const readout = fxList.querySelector(`[data-fx-val="${param}"]`) as HTMLElement | null;
+    if (readout) readout.textContent = formatFxValue(key, val);
+  });
+  fxList.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.dataset.fxParam) return;
+    const el = target as { _fxGesture?: boolean };
+    if (el._fxGesture) {
+      el._fxGesture = false;
+      engine.commitHistory();
+    }
+  });
+}
+
+// Close the panel on an outside click or Escape.
+document.addEventListener('pointerdown', (e) => {
+  if (!fxPanel || fxPanel.hidden) return;
+  const t = e.target as HTMLElement;
+  if (fxPanel.contains(t) || t.closest('.fx-btn')) return;
+  closeFxPanel();
+});
+
 // Refresh the whole UI to match current engine state (used after load/new/clear)
 function refreshAllUI() {
   bpmInput.value = engine.bpm.toFixed(3);
@@ -341,6 +540,10 @@ function refreshAllUI() {
   } else {
     setStatus('no sample');
   }
+
+  // Insert FX buttons + panel
+  updateFxButtons();
+  if (fxPanel && !fxPanel.hidden) renderFxList();
 }
 
 // --- Project save / load (localStorage) ---
@@ -430,6 +633,7 @@ channels.forEach((ch, i) => {
 
 // --- Keyboard shortcuts ---
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeFxPanel();
   // Let text/number fields handle their own keys (native undo inside inputs).
   const target = e.target as HTMLElement | null;
   if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA')) return;

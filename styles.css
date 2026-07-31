@@ -990,6 +990,106 @@ body {
 .channel.selected .channel-name { color: var(--accent); }
 
 /* ============================================================
+   INSERT FX PANEL
+   ============================================================ */
+.fx-btn.active-fx {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: linear-gradient(to bottom, rgba(0, 217, 208, 0.18), rgba(0, 217, 208, 0.08));
+}
+
+.fx-panel {
+  position: fixed;
+  right: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: 55vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom, #383c44, #31343a);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  z-index: 90;
+  overflow: hidden;
+}
+.fx-panel[hidden] { display: none; }
+
+.fx-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--edge);
+  background: linear-gradient(to bottom, #3f434b, #383c44);
+}
+.fx-panel-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.fx-panel-title span { color: var(--accent); }
+
+.fx-panel-actions {
+  display: flex; gap: 6px; padding: 8px 10px;
+  border-bottom: 1px solid var(--edge);
+}
+.fx-add-btn {
+  width: auto; height: 22px; padding: 0 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+
+.fx-list {
+  overflow-y: auto;
+  padding: 8px 10px 10px;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin;
+}
+.fx-empty { font-size: 11px; color: var(--text-faint); padding: 6px 2px; }
+
+.fx-row {
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: #2c2f34;
+  padding: 6px 8px;
+}
+.fx-row.fx-disabled { opacity: 0.55; }
+.fx-row-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.fx-enable-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer;
+}
+.fx-enable-label input[type="checkbox"] { accent-color: var(--accent); }
+.fx-type-name { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-dim); }
+.fx-row.fx-disabled .fx-type-name { color: var(--text-faint); }
+.fx-preset {
+  font-size: 10px;
+  background: #23262b; color: var(--text-dim);
+  border: 1px solid var(--edge); border-radius: 3px;
+  padding: 1px 4px;
+}
+.fx-spacer { flex: 1; }
+.fx-sliders {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.fx-param {
+  display: grid;
+  grid-template-columns: 42px 1fr 64px;
+  align-items: center; gap: 8px;
+}
+.fx-param-label { font-size: 9px; letter-spacing: 0.08em; color: var(--text-faint); }
+.fx-param input[type="range"] {
+  width: 100%; height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.fx-param-val {
+  font-family: var(--mono);
+  font-size: 10px; color: var(--text-dim);
+  text-align: right;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 
