@@ -1,4 +1,4 @@
-// Entry point: wires the transport, step sequencer, and audio engine.
+// Entry point: wires the transport, step sequencer, mixer, and audio engine.
 // Classic script (loaded after src/audio/engine.js, src/sequencer.js), works over file:// too.
 
 const engine = new window.AudioEngine();
@@ -13,10 +13,10 @@ const bpmInput = document.getElementById('bpm-input');
 const sampleName = document.getElementById('sample-name');
 const dropOverlay = document.getElementById('drop-overlay');
 
-// Track mapping: 0 = Kick, 1 = Snare
-let currentTrack = 0; // 0 = Kick, 1 = Snare
+// Current track index for sample loading (0=Kick,1=Snare,2=Bass,3=Synth,4=Pads)
+let currentLoadTrack = 0;
 
-// Initialize step sequencer UI
+// Initialize step sequencer UI in timeline area
 sequencer.mount(document.getElementById('step-sequencer'));
 
 function syncButtons() {
@@ -29,24 +29,25 @@ function setStatus(message, isError = false) {
   sampleName.classList.toggle('loaded', !isError && message !== 'no sample');
 }
 
-function setCurrentTrack(index) {
-  currentTrack = index;
-  // Visual feedback: could highlight track selector later
-}
-
-async function loadSample(file, trackIndex = currentTrack) {
+// --- Sample loading ---
+async function loadSample(file, trackIndex = currentLoadTrack) {
   if (!file) return;
   try {
     await engine.loadSample(file, trackIndex);
     const track = engine.tracks[trackIndex];
     setStatus(`${track.name}: ${file.name}`);
+    highlightCurrentTrack(trackIndex);
   } catch (err) {
     console.error('Failed to load sample:', err);
     setStatus('could not load sample', true);
   }
 }
 
-// --- sample loading: button + drag & drop ---
+function highlightCurrentTrack(trackIndex) {
+  const channels = document.querySelectorAll('.channel');
+  channels.forEach((ch, i) => ch.classList.toggle('selected', i === trackIndex));
+}
+
 btnLoad.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => {
   loadSample(fileInput.files[0]);
@@ -74,7 +75,7 @@ window.addEventListener('drop', (e) => {
   if (file) loadSample(file);
 });
 
-// --- transport: start/stop transport (sequencer) ---
+// --- Transport ---
 btnPlay.addEventListener('click', () => {
   if (!engine.hasSample) {
     setStatus('load a sample first', true);
@@ -82,14 +83,8 @@ btnPlay.addEventListener('click', () => {
   }
   engine.startTransport();
 });
-
-btnStop.addEventListener('click', () => {
-  engine.stopTransport();
-});
-
-btnRec.addEventListener('click', () => {
-  btnRec.classList.toggle('active');
-});
+btnStop.addEventListener('click', () => engine.stopTransport());
+btnRec.addEventListener('click', () => btnRec.classList.toggle('active'));
 
 engine.onStateChange(syncButtons);
 syncButtons();
@@ -105,11 +100,59 @@ bpmInput.addEventListener('change', () => {
   }
 });
 
-// Track selector buttons (Kick/Snare) - could be added to UI later
-// For now, keyboard shortcuts: 1 = Kick, 2 = Snare
+// --- Mixer faders (drag to set volume) ---
+document.querySelectorAll('.fader').forEach((fader, faderIndex) => {
+  const cap = fader.querySelector('.fader-cap');
+  const faderHeight = fader.clientHeight;
+  const capHeight = cap.offsetHeight;
+
+  function setLevel(clientY) {
+    const rect = fader.getBoundingClientRect();
+    const t = Math.max(0, Math.min(1, (clientY - rect.top - capHeight / 2) / (faderHeight - capHeight)));
+    cap.style.top = `${t * (faderHeight - capHeight)}px`;
+    engine.setTrackVolume(faderIndex, t);
+    // Update meter fill proportionally
+    const meterFill = fader.parentElement.querySelector('.meter-fill');
+    if (meterFill) meterFill.style.height = `${t * 100}%`;
+  }
+
+  cap.addEventListener('pointerdown', (e) => {
+    fader.setPointerCapture(e.pointerId);
+    cap._dragging = true;
+    setLevel(e.clientY);
+  });
+  fader.addEventListener('pointermove', (e) => {
+    if (cap._dragging) setLevel(e.clientY);
+  });
+  fader.addEventListener('pointerup', () => { cap._dragging = false; });
+  fader.addEventListener('pointercancel', () => { cap._dragging = false; });
+});
+
+// --- Mixer mute/solo buttons ---
+document.querySelectorAll('.mini-btn[data-mute]').forEach((btn) => {
+  const channel = btn.closest('.channel');
+  const index = Array.from(document.querySelectorAll('.channel')).indexOf(channel);
+  btn.addEventListener('click', () => {
+    engine.toggleMute(index);
+    btn.classList.toggle('active-mute', engine.tracks[index].mute);
+  });
+});
+document.querySelectorAll('.mini-btn[data-solo]').forEach((btn) => {
+  const channel = btn.closest('.channel');
+  const index = Array.from(document.querySelectorAll('.channel')).indexOf(channel);
+  btn.addEventListener('click', () => {
+    engine.toggleSolo(index);
+    btn.classList.toggle('active-solo', engine.tracks[index].solo);
+  });
+});
+
+// --- Track selector via keyboard ---
 window.addEventListener('keydown', (e) => {
-  if (e.key === '1') { setCurrentTrack(0); setStatus('Track: Kick'); }
-  else if (e.key === '2') { setCurrentTrack(1); setStatus('Track: Snare'); }
+  const keys = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4 };
+  if (keys[e.key] !== undefined) {
+    highlightCurrentTrack(keys[e.key]);
+    setStatus(`Track: ${engine.tracks[keys[e.key]].name}`);
+  }
 });
 
 // Expose for testing/debugging

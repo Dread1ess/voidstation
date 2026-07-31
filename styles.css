@@ -639,6 +639,7 @@ body {
   display: flex; align-items: center; justify-content: space-between; gap: 4px;
   margin-top: auto;
 }
+.channel-buttons { display: flex; gap: 3px; }
 .channel-name {
   font-size: 10px; font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;

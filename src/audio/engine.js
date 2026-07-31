@@ -17,11 +17,16 @@ class AudioEngine {
     this.lookahead = 0.1;            // schedule 100ms ahead
     this.scheduleInterval = 25;      // scheduler tick every 25ms
 
-    // Tracks: each track has sample, gain, pattern (16 steps)
+    // Tracks: each track has sample, gain, pattern (16 steps), mute/solo/volume
     this.tracks = [
-      { name: 'Kick', sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0 },
-      { name: 'Snare', sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0 },
+      { name: 'Kick',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
+      { name: 'Snare',  sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
+      { name: 'Bass',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
+      { name: 'Synth',  sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
+      { name: 'Pads',   sample: null, gain: null, pattern: new Array(16).fill(false), volume: 1.0, mute: false, solo: false },
     ];
+    this.trackCount = 5;
+    this._activeTrackCount = 5;
     this.stepsPerBar = 16;
     this.stepIndex = 0;
     this.stepDuration = 0; // seconds per step, computed from BPM
@@ -101,7 +106,41 @@ class AudioEngine {
     const track = this.tracks[trackIndex];
     if (track) {
       track.volume = Math.max(0, Math.min(1, volume));
-      if (track.gain) track.gain.gain.value = track.volume;
+      // Don't override gain here if mute/solo logic overrides it;
+      // setGainByRouting() handles the actual routing value.
+      this._rebuildGain(trackIndex);
+    }
+  }
+
+  // Rebuild a track's effective gain considering volume + mute + solo
+  _rebuildGain(trackIndex) {
+    const track = this.tracks[trackIndex];
+    if (!track || !track.gain) return;
+    const anySolo = this.tracks.some(t => t.solo);
+    let effective = track.volume;
+    if (anySolo && !track.solo) effective = 0;
+    if (track.mute) effective = 0;
+    track.gain.gain.value = effective;
+  }
+
+  // Global solo refresh (call after any toggleMute/toggleSolo)
+  _rebuildAllGains() {
+    this.tracks.forEach((_, i) => this._rebuildGain(i));
+  }
+
+  toggleMute(trackIndex) {
+    const track = this.tracks[trackIndex];
+    if (track) {
+      track.mute = !track.mute;
+      this._rebuildGain(trackIndex);
+    }
+  }
+
+  toggleSolo(trackIndex) {
+    const track = this.tracks[trackIndex];
+    if (track) {
+      track.solo = !track.solo;
+      this._rebuildAllGains();
     }
   }
 
@@ -134,6 +173,10 @@ class AudioEngine {
   _scheduleStep(time, trackIndex) {
     const track = this.tracks[trackIndex];
     if (!track.sample || !track.pattern[this.stepIndex]) return;
+    // Mute/solo routing
+    const anySolo = this.tracks.some(t => t.solo);
+    if (anySolo && !track.solo) return;  // solo active, skip non-soloed tracks
+    if (track.mute) return;                 // muted tracks silent regardless
     const src = this.ctx.createBufferSource();
     src.buffer = track.sample;
     src.connect(track.gain);
