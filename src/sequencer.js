@@ -111,7 +111,7 @@ class StepSequencer {
   loadPattern(patterns) {
     patterns.forEach((pattern, ti) => {
       if (this.engine.tracks[ti]) {
-        this.engine.tracks[ti].pattern = [...pattern];
+        this.engine.tracks[ti].pattern.splice(0, 16, ...pattern);
         this.stepElements[ti].forEach((btn, si) => {
           btn.classList.toggle('active', pattern[si]);
         });

@@ -7,6 +7,7 @@ const engine = new window.AudioEngine();
 const sequencer = new window.StepSequencer(engine);
 const pianoRoll = new window.PianoRoll(engine);
 const instrument = new window.InstrumentPanel(engine);
+const playlist = new window.PlaylistBar(engine);
 
 const fileInput = document.getElementById('file-input');
 const btnLoad = document.getElementById('btn-load');
@@ -39,6 +40,18 @@ if (instrumentEl) {
   instrument.mount(instrumentEl);
   instrument.setTrack(3);
 }
+
+// Initialize Pattern / Playlist bar
+const playlistEl = document.getElementById('playlist-strip');
+if (playlistEl) {
+  playlist.mount(playlistEl);
+}
+
+// When the active pattern changes, re-render editors that show its data
+engine.onPatternChange(() => {
+  sequencer.render();
+  pianoRoll.render();
+});
 
 function syncButtons() {
   btnPlay.classList.toggle('active', engine.isPlaying);
@@ -283,3 +296,4 @@ window.engine = engine;
 window.sequencer = sequencer;
 window.pianoRoll = pianoRoll;
 window.instrument = instrument;
+window.playlist = playlist;

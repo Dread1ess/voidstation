@@ -29,7 +29,105 @@ class AudioEngine {
     this._activeTrackCount = 5;
     this.stepsPerBar = 16;
     this.stepIndex = 0;
+    this.totalSteps = 0;
     this.stepDuration = 0; // seconds per step, computed from BPM
+
+    // Patterns & playlist (FL-style). Each pattern stores per-track
+    // step/note data. tracks[i].pattern / tracks[i].pianoGrid are the live
+    // references to the CURRENT pattern, so editing stays in-place.
+    this.patterns = [
+      { name: 'Pattern 1', tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid() })) },
+    ];
+    this.currentPatternIndex = 0;
+    this.playlist = []; // bar index -> pattern index; [] = play active pattern
+    this._loadPatternIntoLive(0);
+    this._patternListeners = [];
+  }
+
+  // --- Patterns / playlist ---
+
+  onPatternChange(listener) {
+    this._patternListeners.push(listener);
+  }
+
+  _notifyPatternChange() {
+    this._patternListeners.forEach(l => l());
+  }
+
+  // Point the live track references at a given pattern's data.
+  _loadPatternIntoLive(index) {
+    const pat = this.patterns[index];
+    if (!pat) return;
+    this.tracks.forEach((t, i) => {
+      t.pattern = pat.tracks[i].pattern;
+      t.pianoGrid = pat.tracks[i].pianoGrid;
+    });
+  }
+
+  switchPattern(index) {
+    if (!this.patterns[index]) return;
+    this.currentPatternIndex = index;
+    this._loadPatternIntoLive(index);
+    this._notifyPatternChange();
+  }
+
+  addPattern(name) {
+    const tpl = this.patterns[this.currentPatternIndex];
+    const newPat = {
+      name: name || `Pattern ${this.patterns.length + 1}`,
+      tracks: tpl.tracks.map(t => ({ pattern: [...t.pattern], pianoGrid: t.pianoGrid.map(r => [...r]) })),
+    };
+    this.patterns.push(newPat);
+    this.currentPatternIndex = this.patterns.length - 1;
+    this._loadPatternIntoLive(this.currentPatternIndex);
+    this._notifyPatternChange();
+    return newPat;
+  }
+
+  duplicatePattern() {
+    return this.addPattern(this.patterns[this.currentPatternIndex].name + ' copy');
+  }
+
+  deletePattern(index) {
+    if (this.patterns.length <= 1 || !this.patterns[index]) return;
+    this.patterns.splice(index, 1);
+    if (this.currentPatternIndex >= this.patterns.length) {
+      this.currentPatternIndex = this.patterns.length - 1;
+    }
+    // Fix playlist references: the deleted pattern's slots become empty,
+    // references after it shift down by one.
+    this.playlist = this.playlist
+      .map(p => (p === undefined ? undefined : p === index ? undefined : p > index ? p - 1 : p))
+      .filter(p => p !== undefined);
+    this._loadPatternIntoLive(this.currentPatternIndex);
+    this._notifyPatternChange();
+  }
+
+  setPlaylistCell(bar, patternIndex) {
+    if (bar < 0) return;
+    if (patternIndex === undefined || patternIndex < 0) {
+      delete this.playlist[bar];
+    } else if (this.patterns[patternIndex]) {
+      this.playlist[bar] = patternIndex;
+    }
+    this._notifyPatternChange();
+  }
+
+  getPlaylistLength() {
+    return this.playlist.length;
+  }
+
+  // Data source for a track while scheduling. Follows the playlist when an
+  // arrangement is set; otherwise falls back to the live (active) pattern.
+  _stepSourceFor(trackIndex) {
+    if (this.playlist.length > 0 && this.isPlaying) {
+      const bar = Math.floor(this.totalSteps / this.stepsPerBar);
+      const patIdx = this.playlist[bar % this.playlist.length];
+      const pat = patIdx !== undefined ? this.patterns[patIdx] : null;
+      if (pat && pat.tracks[trackIndex]) return pat.tracks[trackIndex];
+      return null; // empty arrangement slot -> silence
+    }
+    return this.tracks[trackIndex]; // live references == current pattern
   }
 
   onStateChange(listener) {
@@ -114,10 +212,12 @@ class AudioEngine {
   }
 
   get hasContent() {
-    return this.tracks.some(t =>
-      t.sample !== null ||
-      (t.pianoGrid && t.pianoGrid.some(row => row.some(active => active)))
-    );
+    return this.patterns.some(p =>
+      p.tracks.some(t =>
+        t.pattern.some(Boolean) ||
+        (t.pianoGrid && t.pianoGrid.some(row => row.some(active => active)))
+      )
+    ) || this.hasSample;
   }
 
   // Lazily create the context. Must be called from a user gesture
@@ -158,8 +258,9 @@ class AudioEngine {
   // Set pattern for a track (array of 16 booleans)
   setPattern(trackIndex, pattern) {
     const track = this.tracks[trackIndex];
-    if (track && pattern.length === 16) {
-      track.pattern = [...pattern];
+    if (track && pattern && pattern.length === 16) {
+      // Write in place so the live reference stays linked to the pattern
+      track.pattern.splice(0, 16, ...pattern);
     }
   }
 
@@ -249,8 +350,11 @@ class AudioEngine {
     if (anySolo && !track.solo) return;  // solo active, skip non-soloed tracks
     if (track.mute) return;                 // muted tracks silent regardless
 
+    const srcData = this._stepSourceFor(trackIndex);
+    if (!srcData) return; // empty playlist slot -> silence
+
     // 1) Sample playback (if sample loaded and pattern step active)
-    if (track.sample && track.pattern[this.stepIndex]) {
+    if (track.sample && srcData.pattern[this.stepIndex]) {
       const src = this.ctx.createBufferSource();
       src.buffer = track.sample;
       src.connect(track.gain);
@@ -258,10 +362,10 @@ class AudioEngine {
     }
 
     // 2) Synth note playback (if piano grid has notes on this step)
-    if (track.pianoGrid) {
+    if (srcData.pianoGrid) {
       const step = this.stepIndex;
       for (let pitch = 0; pitch < 24; pitch++) {
-        const lengthSteps = track.pianoGrid[pitch][step];
+        const lengthSteps = srcData.pianoGrid[pitch][step];
         if (lengthSteps) {
           // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
           const midi = 71 - pitch;
@@ -283,6 +387,7 @@ class AudioEngine {
       // Advance
       this.nextStepTime += this.stepDuration;
       this.stepIndex = (this.stepIndex + 1) % this.stepsPerBar;
+      this.totalSteps++;
       this._notifyStepChange();
     }
   }
@@ -292,6 +397,7 @@ class AudioEngine {
     this._updateStepDuration();
     this.isPlaying = true;
     this.stepIndex = 0;
+    this.totalSteps = 0;
     this.nextStepTime = this.ctx.currentTime + 0.005; // tiny offset
     this._notifyStateChange();
     // Scheduler loop
@@ -335,23 +441,45 @@ class AudioEngine {
     return bytes.buffer;
   }
 
+  // Normalize any saved pianoGrid shape into 24x16 numeric note lengths.
+  _normalizePianoGrid(saved, fallback) {
+    const grid = fallback || this._createPianoGrid();
+    if (!Array.isArray(saved)) return grid;
+    for (let p = 0; p < 24; p++) {
+      const row = saved[p];
+      if (!Array.isArray(row)) continue;
+      for (let s = 0; s < 16; s++) {
+        const v = row[s];
+        if (v) grid[p][s] = typeof v === 'number' ? v : 1;
+      }
+    }
+    return grid;
+  }
+
   // Return a plain JSON-serializable snapshot of the whole project.
   // Note: sample data is stored as base64 inside the snapshot (may be large).
   serialize() {
     return {
-      version: 1,
+      version: 2,
       bpm: this.bpm,
       tracks: this.tracks.map((t) => ({
         name: t.name,
         sampleName: t.sampleName,
         sampleData: t.sampleData ? this._arrayBufferToBase64(t.sampleData) : null,
-        pattern: [...t.pattern],
-        pianoGrid: t.pianoGrid.map((row) => [...row]),
         volume: t.volume,
         mute: t.mute,
         solo: t.solo,
         synthType: t.synthType,
         adsr: { ...t.adsr },
+      })),
+      currentPatternIndex: this.currentPatternIndex,
+      playlist: [...this.playlist],
+      patterns: this.patterns.map((p) => ({
+        name: p.name,
+        tracks: p.tracks.map((t) => ({
+          pattern: [...t.pattern],
+          pianoGrid: t.pianoGrid.map((row) => [...row]),
+        })),
       })),
     };
   }
@@ -364,13 +492,45 @@ class AudioEngine {
     this.bpm = state.bpm || 124;
     this._updateStepDuration();
 
+    // v1 projects stored per-track pattern/pianoGrid directly on tracks;
+    // wrap them into a single pattern so nothing is lost.
+    let patterns = state.patterns;
+    if (!Array.isArray(patterns) || patterns.length === 0) {
+      patterns = [{
+        name: 'Pattern 1',
+        tracks: this.tracks.map((_, i) => {
+          const saved = state.tracks[i];
+          return {
+            pattern: Array.isArray(saved.pattern) ? [...saved.pattern] : new Array(16).fill(false),
+            pianoGrid: this._normalizePianoGrid(saved.pianoGrid, this._createPianoGrid()),
+          };
+        }),
+      }];
+    }
+
+    this.patterns = patterns.map(p => ({
+      name: p.name || 'Pattern',
+      tracks: p.tracks.map(t => ({
+        pattern: Array.isArray(t.pattern) ? t.pattern.map(Boolean) : new Array(16).fill(false),
+        pianoGrid: Array.isArray(t.pianoGrid)
+          ? this._normalizePianoGrid(t.pianoGrid, this._createPianoGrid())
+          : this._createPianoGrid(),
+      })),
+    }));
+
+    this.currentPatternIndex = Math.min(state.currentPatternIndex || 0, this.patterns.length - 1);
+    this.playlist = Array.isArray(state.playlist)
+      ? state.playlist.map(v => (typeof v === 'number' && v >= 0 && v < this.patterns.length ? v : undefined))
+      : [];
+
+    this._loadPatternIntoLive(this.currentPatternIndex);
+
     for (let i = 0; i < this.tracks.length; i++) {
       const saved = state.tracks[i];
       if (!saved) continue;
       const track = this.tracks[i];
       track.name = saved.name || track.name;
       track.sampleName = saved.sampleName || null;
-      track.pattern = Array.isArray(saved.pattern) ? [...saved.pattern] : new Array(16).fill(false);
       track.volume = saved.volume !== undefined ? saved.volume : 1;
       track.mute = !!saved.mute;
       track.solo = !!saved.solo;
@@ -382,15 +542,6 @@ class AudioEngine {
           sustain: saved.adsr.sustain !== undefined ? saved.adsr.sustain : track.adsr.sustain,
           release: saved.adsr.release !== undefined ? saved.adsr.release : track.adsr.release,
         };
-      }
-      if (Array.isArray(saved.pianoGrid)) {
-        for (let p = 0; p < 24; p++) {
-          for (let s = 0; s < 16; s++) {
-            // Keep numeric length (0 = empty). Old saves stored booleans.
-            const v = saved.pianoGrid[p] && saved.pianoGrid[p][s];
-            track.pianoGrid[p][s] = v ? (typeof v === 'number' ? v : 1) : 0;
-          }
-        }
       }
       // Restore sample data (decode base64 -> AudioBuffer)
       track.sample = null;
@@ -411,6 +562,7 @@ class AudioEngine {
 
     this._rebuildAllGains();
     this._notifyStateChange();
+    this._notifyPatternChange();
   }
 
   // Reset all tracks to a blank project (keeps gain nodes / context).
@@ -432,14 +584,20 @@ class AudioEngine {
       t.sample = null;
       t.sampleData = null;
       t.sampleName = null;
-      t.pattern = new Array(16).fill(false);
-      t.pianoGrid = this._createPianoGrid();
       t.volume = 1;
       t.mute = false;
       t.solo = false;
     });
+    this.patterns = [{
+      name: 'Pattern 1',
+      tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid() })),
+    }];
+    this.currentPatternIndex = 0;
+    this.playlist = [];
+    this._loadPatternIntoLive(0);
     this._rebuildAllGains();
     this._notifyStateChange();
+    this._notifyPatternChange();
   }
 }
 
