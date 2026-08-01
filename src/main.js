@@ -51,7 +51,7 @@ if (playlistEl) {
 playlist.mountPatternControls(document.getElementById('pattern-controls'));
 // Per-track syntax-highlight colors (VS Code palette), used by the step
 // sequencer matrix and the piano-roll note fill.
-const TRACK_COLORS = ['#4ec9b0', '#ce9178', '#569cd6', '#c586c0', '#6a9955'];
+const TRACK_COLORS = ['#D99B7F', '#A56F63', '#4F8F93', '#C4876B', '#7E8B6F'];
 // Explorer: pattern list (one tree row per pattern, click to select).
 function renderPatternTree() {
     const host = document.getElementById('pattern-list');
@@ -1017,13 +1017,13 @@ const UNIT_SPECS = {
     eq: {
         title: 'GRAPHIC EQ',
         knobs: [
-            { label: '125', cap: '#5db2ff', deg: 0 },
-            { label: '250', cap: '#5db2ff', deg: 20 },
-            { label: '500', cap: '#5db2ff', deg: 45 },
-            { label: '1K', cap: '#5db2ff', deg: 70 },
-            { label: '2K', cap: '#5db2ff', deg: 45 },
-            { label: '4K', cap: '#5db2ff', deg: 20 },
-            { label: '8K', cap: '#5db2ff', deg: 0 },
+            { label: '125', cap: '#C4876B', deg: 0 },
+            { label: '250', cap: '#C4876B', deg: 20 },
+            { label: '500', cap: '#C4876B', deg: 45 },
+            { label: '1K', cap: '#C4876B', deg: 70 },
+            { label: '2K', cap: '#C4876B', deg: 45 },
+            { label: '4K', cap: '#C4876B', deg: 20 },
+            { label: '8K', cap: '#C4876B', deg: 0 },
         ],
         toggles: ['EQ IN'],
         withMeter: true,
@@ -1031,9 +1031,9 @@ const UNIT_SPECS = {
     'parametric-eq': {
         title: 'PARAMETRIC EQ',
         knobs: [
-            { label: 'FREQ', cap: '#2980b9', deg: 30 },
-            { label: 'GAIN', cap: '#e67e22', deg: 0 },
-            { label: 'Q', cap: '#f1c40f', deg: 60 },
+            { label: 'FREQ', cap: '#A56F63', deg: 30 },
+            { label: 'GAIN', cap: '#D99B7F', deg: 0 },
+            { label: 'Q', cap: '#C4876B', deg: 60 },
         ],
         toggles: ['IN'],
         withMeter: true,
@@ -1041,10 +1041,10 @@ const UNIT_SPECS = {
     'tape-delay': {
         title: 'TAPE DELAY',
         knobs: [
-            { label: 'TIME', cap: '#2980b9', deg: 30 },
-            { label: 'FEED', cap: '#e67e22', deg: 40 },
-            { label: 'MIX', cap: '#f1c40f', deg: 60 },
-            { label: 'WOBBLE', cap: '#34495e', deg: 15 },
+            { label: 'TIME', cap: '#A56F63', deg: 30 },
+            { label: 'FEED', cap: '#D99B7F', deg: 40 },
+            { label: 'MIX', cap: '#C4876B', deg: 60 },
+            { label: 'WOBBLE', cap: '#464858', deg: 15 },
         ],
         toggles: ['SYNC', 'PING-PONG'],
         withMeter: true,
@@ -1052,9 +1052,9 @@ const UNIT_SPECS = {
     reverb: {
         title: 'REVERB',
         knobs: [
-            { label: 'SIZE', cap: '#2980b9', deg: 70 },
-            { label: 'DAMP', cap: '#5db2ff', deg: 30 },
-            { label: 'MIX', cap: '#f1c40f', deg: 50 },
+            { label: 'SIZE', cap: '#A56F63', deg: 70 },
+            { label: 'DAMP', cap: '#C4876B', deg: 30 },
+            { label: 'MIX', cap: '#C4876B', deg: 50 },
         ],
         toggles: ['PLATE'],
         withMeter: true,
@@ -1062,11 +1062,11 @@ const UNIT_SPECS = {
     compressor: {
         title: 'COMPRESSOR',
         knobs: [
-            { label: 'THRESH', cap: '#e67e22', deg: 60 },
-            { label: 'RATIO', cap: '#f1c40f', deg: 30 },
-            { label: 'ATTACK', cap: '#5db2ff', deg: 20 },
-            { label: 'RELEASE', cap: '#5db2ff', deg: 70 },
-            { label: 'MAKEUP', cap: '#e67e22', deg: 45 },
+            { label: 'THRESH', cap: '#D99B7F', deg: 60 },
+            { label: 'RATIO', cap: '#C4876B', deg: 30 },
+            { label: 'ATTACK', cap: '#C4876B', deg: 20 },
+            { label: 'RELEASE', cap: '#C4876B', deg: 70 },
+            { label: 'MAKEUP', cap: '#D99B7F', deg: 45 },
         ],
         toggles: ['COMP IN'],
         withFader: true,
@@ -1075,12 +1075,12 @@ const UNIT_SPECS = {
     synth: {
         title: 'SYNTH',
         knobs: [
-            { label: 'OSC1', cap: '#f1c40f', deg: 30 },
-            { label: 'OSC2', cap: '#f1c40f', deg: -30 },
-            { label: 'CUTOFF', cap: '#e67e22', deg: 45 },
-            { label: 'RES', cap: '#5db2ff', deg: 70 },
-            { label: 'ENV', cap: '#2980b9', deg: 0 },
-            { label: 'LFO', cap: '#34495e', deg: 60 },
+            { label: 'OSC1', cap: '#C4876B', deg: 30 },
+            { label: 'OSC2', cap: '#C4876B', deg: -30 },
+            { label: 'CUTOFF', cap: '#D99B7F', deg: 45 },
+            { label: 'RES', cap: '#C4876B', deg: 70 },
+            { label: 'ENV', cap: '#A56F63', deg: 0 },
+            { label: 'LFO', cap: '#464858', deg: 60 },
         ],
         toggles: ['MONO', 'LEGATO'],
         withFader: true,
