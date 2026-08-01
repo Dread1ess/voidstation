@@ -12,6 +12,7 @@ import { StepSequencer } from './stepSequencer.js';
 import { PianoRoll } from './pianoRoll.js';
 import { Playlist } from './playlist.js';
 import { Mixer } from './mixer.js';
+import { Sampler } from './sampler.js';
 
 export interface AppRefs {
   engine: AudioEngine;
@@ -21,6 +22,7 @@ export interface AppRefs {
   pianoRoll: PianoRoll;
   playlist: Playlist;
   mixer: Mixer;
+  sampler: Sampler;
 }
 
 export function buildApp(container: HTMLElement): AppRefs {
@@ -33,6 +35,7 @@ export function buildApp(container: HTMLElement): AppRefs {
   const prMod = wall.addModule('piano-roll', 'PIANO ROLL', 30, 470);
   const plMod = wall.addModule('playlist', 'PATTERN ARRANGER', 30, 780);
   const mixMod = wall.addModule('mixer', 'MIXING CONSOLE', 1030, 30);
+  const samplerMod = wall.addModule('sampler', 'SAMPLER', 1030, 420);
 
   // Mount feature modules into their rack bodies.
   const transport = new Transport(engine, transportMod.body);
@@ -40,9 +43,13 @@ export function buildApp(container: HTMLElement): AppRefs {
   const pianoRoll = new PianoRoll(engine, prMod.body);
   const playlist = new Playlist(engine, plMod.body);
   const mixer = new Mixer(engine, mixMod.body);
+  const sampler = new Sampler(engine, samplerMod.body);
 
   // Selecting a mixer channel focuses the piano roll on that track.
-  mixer.setOnSelect((track) => pianoRoll.setTrack(track));
+  mixer.setOnSelect((track) => {
+    pianoRoll.setTrack(track);
+    sampler.setTrack(track);
+  });
 
-  return { engine, wall, transport, sequencer, pianoRoll, playlist, mixer };
+  return { engine, wall, transport, sequencer, pianoRoll, playlist, mixer, sampler };
 }
