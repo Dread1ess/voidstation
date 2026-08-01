@@ -15,6 +15,8 @@ python3 -m http.server 8000
 
 Then visit http://localhost:8000.
 
+![VOIDSTATION hardware-wall UI](Screenshot_20260801_163859.png)
+
 ## UI — hardware wall
 
 The main interface is a canvas-style "studio room": a large world
