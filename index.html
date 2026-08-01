@@ -261,126 +261,217 @@
         <div class="editor-tab active" id="tab-pattern"><span id="tab-pattern-name">pattern_1.pattern</span></div>
       </div>
 
-    <!-- TIMELINE / PIANO ROLL -->
-    <section class="timeline">
-      <div class="timeline-inner">
-        <!-- Pattern / Playlist bar (Stage 8) -->
-        <div class="playlist-strip" id="playlist-strip"></div>
-        <div class="ruler" id="ruler">
-          <div class="corner"></div>
-        </div>
-        <!-- Step Sequencer (Stage 2) -->
-        <div class="step-sequencer-container" id="step-sequencer"></div>
-        <!-- Piano Roll -->
-        <div class="piano-roll" id="piano">
-          <div class="keys" id="keys"></div>
-          <div class="piano-roll-grid-container" id="piano-roll-grid"></div>
-          <div class="playhead" id="playhead">
-            <div class="playhead-handle"></div>
-            <div class="playhead-line"></div>
+      <div class="board-workspace">
+        <div class="board-viewport" id="board-viewport">
+          <div class="board" id="board">
+            <!-- Sequencer Rack (central editing surface) -->
+            <div class="board-item rack sequencer-rack" data-unit="sequencer" data-id="seq" style="left: 20px; top: 20px;">
+              <div class="rack-titlebar">
+                <span class="rack-name">STEP SEQUENCER</span>
+                <div class="rack-controls">
+                  <button class="mini-btn rack-close" title="Close rack">×</button>
+                </div>
+              </div>
+              <section class="timeline" id="timeline">
+                <div class="timeline-inner">
+                  <!-- Pattern / Playlist bar (Stage 8) -->
+                  <div class="playlist-strip" id="playlist-strip"></div>
+                  <div class="ruler" id="ruler">
+                    <div class="corner"></div>
+                  </div>
+                  <!-- Step Sequencer (Stage 2) -->
+                  <div class="step-sequencer-container" id="step-sequencer"></div>
+                  <!-- Piano Roll -->
+                  <div class="piano-roll" id="piano">
+                    <div class="keys" id="keys"></div>
+                    <div class="piano-roll-grid-container" id="piano-roll-grid"></div>
+                    <div class="playhead" id="playhead">
+                      <div class="playhead-handle"></div>
+                      <div class="playhead-line"></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <div class="unit-sockets">
+                <span class="socket-label">SEQ OUT</span>
+                <span class="jack out" data-jack="seq-out"></span>
+                <span class="socket-label">CLOCK</span>
+                <span class="jack in" data-jack="seq-in"></span>
+              </div>
+            </div>
+
+            <!-- Mixer Console Unit -->
+            <div class="board-item unit mixer-unit" data-unit="mixer" data-id="mixer" style="left: 20px; top: 628px;">
+              <div class="unit-titlebar">
+                <span class="unit-name">MIXING CONSOLE</span>
+                <div class="unit-controls">
+                  <button class="mini-btn unit-close" title="Close unit">×</button>
+                </div>
+              </div>
+              <footer class="mixer" id="mixer">
+                <div class="dsp-panel" id="dsp-panel">
+                  <div class="dsp-display">
+                    <div class="dsp-ghost">8888</div>
+                    <div class="dsp-value">124.0</div>
+                  </div>
+                  <div class="dsp-guide">
+                    <span class="dsp-guide-title">FX PATCH GUIDE</span>
+                    <span>1: DLY  2: FLNGR  3: REVERB  4: CRUSHR  5: LOFI</span>
+                  </div>
+                </div>
+                <div class="channel selected" data-name="Kick">
+                  <div class="channel-head">
+                    <div class="knob-scale"><span class="ks-mark ks-l">−15</span><span class="ks-mark ks-c">0</span><span class="ks-mark ks-r">+15</span></div>
+                    <div class="knob" style="--deg:-30deg" title="Pan"></div>
+                    <div class="led"></div>
+                  </div>
+                  <div class="meter-strip">
+                    <div class="meter-scale"><span>+6</span><span>+3</span><span>0</span><span>−10</span><span>−20</span><span>−30</span></div>
+                    <div class="meter"><div class="meter-fill" style="height:46%"></div></div>
+                  </div>
+                  <div class="fader-strip">
+                    <div class="fader-scale"><span>∞</span><span>60</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>5</span><span>0</span><span>5</span><span>10</span></div>
+                    <div class="fader" style="--level:.45"><div class="fader-cap" style="top:23px"></div></div>
+                  </div>
+                  <div class="channel-foot">
+                    <span class="channel-name">Kick</span>
+                    <div class="channel-buttons">
+                      <button class="mini-btn" data-mute title="Mute">M</button>
+                      <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="channel" data-name="Snare">
+                  <div class="channel-head">
+                    <div class="knob-scale"><span class="ks-mark ks-l">−15</span><span class="ks-mark ks-c">0</span><span class="ks-mark ks-r">+15</span></div>
+                    <div class="knob" style="--deg:22deg" title="Pan"></div>
+                    <div class="led"></div>
+                  </div>
+                  <div class="meter-strip">
+                    <div class="meter-scale"><span>+6</span><span>+3</span><span>0</span><span>−10</span><span>−20</span><span>−30</span></div>
+                    <div class="meter"><div class="meter-fill" style="height:68%"></div></div>
+                  </div>
+                  <div class="fader-strip">
+                    <div class="fader-scale"><span>∞</span><span>60</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>5</span><span>0</span><span>5</span><span>10</span></div>
+                    <div class="fader" style="--level:.62"><div class="fader-cap" style="top:32px"></div></div>
+                  </div>
+                  <div class="channel-foot">
+                    <span class="channel-name">Snare</span>
+                    <div class="channel-buttons">
+                      <button class="mini-btn" data-mute title="Mute">M</button>
+                      <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="channel" data-name="Bass">
+                  <div class="channel-head">
+                    <div class="knob-scale"><span class="ks-mark ks-l">−15</span><span class="ks-mark ks-c">0</span><span class="ks-mark ks-r">+15</span></div>
+                    <div class="knob" style="--deg:-45deg" title="Pan"></div>
+                    <div class="led"></div>
+                  </div>
+                  <div class="meter-strip">
+                    <div class="meter-scale"><span>+6</span><span>+3</span><span>0</span><span>−10</span><span>−20</span><span>−30</span></div>
+                    <div class="meter"><div class="meter-fill" style="height:30%"></div></div>
+                  </div>
+                  <div class="fader-strip">
+                    <div class="fader-scale"><span>∞</span><span>60</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>5</span><span>0</span><span>5</span><span>10</span></div>
+                    <div class="fader" style="--level:.28"><div class="fader-cap" style="top:14px"></div></div>
+                  </div>
+                  <div class="channel-foot">
+                    <span class="channel-name">Bass</span>
+                    <div class="channel-buttons">
+                      <button class="mini-btn" data-mute title="Mute">M</button>
+                      <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="channel" data-name="Synth">
+                  <div class="channel-head">
+                    <div class="knob-scale"><span class="ks-mark ks-l">−15</span><span class="ks-mark ks-c">0</span><span class="ks-mark ks-r">+15</span></div>
+                    <div class="knob" style="--deg:40deg" title="Pan"></div>
+                    <div class="led"></div>
+                  </div>
+                  <div class="meter-strip">
+                    <div class="meter-scale"><span>+6</span><span>+3</span><span>0</span><span>−10</span><span>−20</span><span>−30</span></div>
+                    <div class="meter"><div class="meter-fill" style="height:55%"></div></div>
+                  </div>
+                  <div class="fader-strip">
+                    <div class="fader-scale"><span>∞</span><span>60</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>5</span><span>0</span><span>5</span><span>10</span></div>
+                    <div class="fader" style="--level:.5"><div class="fader-cap" style="top:26px"></div></div>
+                  </div>
+                  <div class="channel-foot">
+                    <span class="channel-name">Synth</span>
+                    <div class="channel-buttons">
+                      <button class="mini-btn" data-mute title="Mute">M</button>
+                      <button class="mini-btn" data-solo title="Solo">S</button>
+                      <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="channel" data-name="Pads">
+                  <div class="channel-head">
+                    <div class="knob-scale"><span class="ks-mark ks-l">−15</span><span class="ks-mark ks-c">0</span><span class="ks-mark ks-r">+15</span></div>
+                    <div class="knob" style="--deg:0deg" title="Pan"></div>
+                    <div class="led"></div>
+                  </div>
+                  <div class="meter-strip">
+                    <div class="meter-scale"><span>+6</span><span>+3</span><span>0</span><span>−10</span><span>−20</span><span>−30</span></div>
+                    <div class="meter"><div class="meter-fill" style="height:40%"></div></div>
+                  </div>
+                  <div class="fader-strip">
+                    <div class="fader-scale"><span>∞</span><span>60</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>5</span><span>0</span><span>5</span><span>10</span></div>
+                    <div class="fader" style="--level:.7"><div class="fader-cap" style="top:36px"></div></div>
+                  </div>
+                  <div class="channel-foot">
+                    <span class="channel-name">Pads</span>
+                    <div class="channel-buttons">
+                      <button class="mini-btn" data-mute title="Mute">M</button>
+                      <button class="mini-btn" data-solo title="Solo">S</button>
+                      <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
+                    </div>
+                  </div>
+                </div>
+              </footer>
+              <div class="unit-sockets">
+                <span class="socket-label">MAIN OUT</span>
+                <span class="jack out" data-jack="mixer-out-l"></span>
+                <span class="jack out" data-jack="mixer-out-r"></span>
+                <span class="socket-label">INSERT</span>
+                <span class="jack in" data-jack="mixer-ins"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hardware Catalog Bar -->
+          <div class="hw-catalog" id="hw-catalog">
+            <div class="hw-catalog-handle">≡ HARDWARE</div>
+            <div class="hw-items">
+              <div class="hw-item" data-catalog="mixer"><span class="hw-icon">🎛</span><span class="hw-label">MIXER</span></div>
+              <div class="hw-item" data-catalog="eq"><span class="hw-icon">🎚</span><span class="hw-label">GRAPHIC EQ</span></div>
+              <div class="hw-item" data-catalog="parametric-eq"><span class="hw-icon">🎛</span><span class="hw-label">PARAMETRIC EQ</span></div>
+              <div class="hw-item" data-catalog="tape-delay"><span class="hw-icon">📼</span><span class="hw-label">TAPE DELAY</span></div>
+              <div class="hw-item" data-catalog="reverb"><span class="hw-icon">🏔</span><span class="hw-label">REVERB</span></div>
+              <div class="hw-item" data-catalog="compressor"><span class="hw-icon">🗜</span><span class="hw-label">COMPRESSOR</span></div>
+              <div class="hw-item" data-catalog="synth"><span class="hw-icon">🎹</span><span class="hw-label">SYNTH</span></div>
+            </div>
+          </div>
+
+          <!-- Board HUD -->
+          <div class="board-hud" id="board-hud">
+            <button class="hud-btn" id="btn-zoom-out" title="Zoom out">−</button>
+            <span class="hud-zoom" id="zoom-label">100%</span>
+            <button class="hud-btn" id="btn-zoom-in" title="Zoom in">＋</button>
+            <button class="hud-btn" id="btn-recenter" title="Recenter view">⌖</button>
+            <span class="hud-hint">Space+Drag to pan | Ctrl+Wheel to zoom</span>
           </div>
         </div>
       </div>
-    </section>
     </main>
   </div>
-
-  <!-- ============ BOTTOM PANEL ============ -->
-  <section class="bottom-panel" id="bottom-panel">
-    <div class="bottom-tabs">
-      <button class="bt-tab active" data-btab="mixer">Mixer</button>
-      <button class="bt-tab" data-btab="output">Output</button>
-      <button class="mini-btn bt-close" id="btn-bottom-close" title="Close panel (Ctrl+J)">×</button>
-    </div>
-
-    <!-- ============ MIXER ============ -->
-    <footer class="mixer" id="mixer" data-btab="mixer">
-    <div class="mixer-label">MIXER</div>
-
-    <div class="channel selected" data-name="Kick">
-      <div class="channel-head">
-        <div class="knob" style="--deg:-30deg" title="Pan"></div>
-        <div class="led"></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="height:46%"></div></div>
-      <div class="fader" style="--level:.45"><div class="fader-cap" style="top:23px"></div></div>
-      <div class="channel-foot">
-        <span class="channel-name">Kick</span>
-        <div class="channel-buttons">
-          <button class="mini-btn" data-mute title="Mute">M</button>
-          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="channel" data-name="Snare">
-      <div class="channel-head">
-        <div class="knob" style="--deg:22deg" title="Pan"></div>
-        <div class="led"></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="height:68%"></div></div>
-      <div class="fader" style="--level:.62"><div class="fader-cap" style="top:32px"></div></div>
-      <div class="channel-foot">
-        <span class="channel-name">Snare</span>
-        <div class="channel-buttons">
-          <button class="mini-btn" data-mute title="Mute">M</button>
-          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="channel" data-name="Bass">
-      <div class="channel-head">
-        <div class="knob" style="--deg:-45deg" title="Pan"></div>
-        <div class="led"></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="height:30%"></div></div>
-      <div class="fader" style="--level:.28"><div class="fader-cap" style="top:14px"></div></div>
-      <div class="channel-foot">
-        <span class="channel-name">Bass</span>
-        <div class="channel-buttons">
-          <button class="mini-btn" data-mute title="Mute">M</button>
-          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="channel" data-name="Synth">
-      <div class="channel-head">
-        <div class="knob" style="--deg:40deg" title="Pan"></div>
-        <div class="led"></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="height:55%"></div></div>
-      <div class="fader" style="--level:.5"><div class="fader-cap" style="top:26px"></div></div>
-      <div class="channel-foot">
-        <span class="channel-name">Synth</span>
-        <div class="channel-buttons">
-          <button class="mini-btn" data-mute title="Mute">M</button>
-          <button class="mini-btn" data-solo title="Solo">S</button>
-          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="channel" data-name="Pads">
-      <div class="channel-head">
-        <div class="knob" style="--deg:0deg" title="Pan"></div>
-        <div class="led"></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="height:40%"></div></div>
-      <div class="fader" style="--level:.7"><div class="fader-cap" style="top:36px"></div></div>
-      <div class="channel-foot">
-        <span class="channel-name">Pads</span>
-        <div class="channel-buttons">
-          <button class="mini-btn" data-mute title="Mute">M</button>
-          <button class="mini-btn" data-solo title="Solo">S</button>
-          <button class="mini-btn fx-btn" data-fx title="Insert effects">FX</button>
-        </div>
-      </div>
-    </div>
-  </footer>
-    <div class="output-log mono" id="output-log" data-btab="output" hidden></div>
-  </section>
 
   <!-- ============ STATUS BAR ============ -->
   <footer class="status-bar">

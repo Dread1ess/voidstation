@@ -718,7 +718,7 @@ const paletteCommands = [
     { title: 'Export WAV', kbd: '', run: () => btnExport.click() },
     { title: 'Load Sample', kbd: '', run: () => fileInput.click() },
     { title: 'Toggle Sidebar', kbd: 'Ctrl+B', run: () => sidebar?.classList.toggle('hidden') },
-    { title: 'Toggle Bottom Panel', kbd: 'Ctrl+J', run: () => bottomPanel?.classList.toggle('hidden') },
+    { title: 'Recenter Board', kbd: 'Ctrl+J', run: () => recenterView() },
     { title: 'View: Explorer', kbd: 'Ctrl+Shift+E', run: () => showSidebarSection('explorer') },
     { title: 'View: Tracks', kbd: 'Ctrl+Shift+T', run: () => showSidebarSection('tracks') },
     { title: 'View: Source Control', kbd: 'Ctrl+Shift+G', run: () => showSidebarSection('git') },
@@ -807,7 +807,7 @@ window.addEventListener('keydown', (e) => {
     }
     if (mod && e.key.toLowerCase() === 'j') {
         e.preventDefault();
-        bottomPanel?.classList.toggle('hidden');
+        recenterView();
         return;
     }
     // Let text/number fields handle their own keys (native undo inside inputs).
@@ -842,6 +842,470 @@ window.addEventListener('keydown', (e) => {
         } });
     }
 });
+// ============================================================
+// BOARD STUDIO: infinite canvas pan/zoom, draggable hardware
+// units, hardware catalog, virtual patch cables
+// ============================================================
+const boardViewport = document.getElementById('board-viewport');
+const board = document.getElementById('board');
+const zoomLabel = document.getElementById('zoom-label');
+const BOARD_KEY = 'voidstation-board-v1';
+const BOARD_NS = 'http://www.w3.org/2000/svg';
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2.5;
+let zoom = 1;
+let panX = 0;
+let panY = 0;
+let spaceDown = false;
+let panning = false;
+let zCounter = 10;
+function clampZoom(z) {
+    return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+}
+function applyBoardTransform() {
+    if (!board)
+        return;
+    board.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    if (zoomLabel)
+        zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    boardViewport?.classList.toggle('panning', panning);
+}
+function screenToBoard(cx, cy) {
+    const r = boardViewport.getBoundingClientRect();
+    return { x: (cx - r.left - panX) / zoom, y: (cy - r.top - panY) / zoom };
+}
+function zoomAt(cx, cy, factor) {
+    const r = boardViewport.getBoundingClientRect();
+    const bx = cx - r.left, by = cy - r.top;
+    const wx = (bx - panX) / zoom, wy = (by - panY) / zoom;
+    zoom = clampZoom(zoom * factor);
+    panX = bx - wx * zoom;
+    panY = by - wy * zoom;
+    applyBoardTransform();
+}
+function recenterView() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    applyBoardTransform();
+    saveBoardState();
+}
+function centerOn(el) {
+    const v = boardViewport.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const target = screenToBoard(v.left + v.width / 2, v.top + v.height / 2);
+    const cur = screenToBoard(r.left + r.width / 2, r.top + r.height / 2);
+    panX += (target.x - cur.x) * zoom;
+    panY += (target.y - cur.y) * zoom;
+    applyBoardTransform();
+}
+function bringToFront(el) {
+    el.style.zIndex = String(++zCounter);
+}
+// --- pan: middle-drag or Space + left-drag ---
+if (boardViewport) {
+    boardViewport.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey)
+            return;
+        e.preventDefault();
+        zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+        saveBoardState();
+    }, { passive: false });
+    boardViewport.addEventListener('pointerdown', (e) => {
+        const middle = e.button === 1;
+        if (!middle && !spaceDown)
+            return;
+        e.preventDefault();
+        panning = true;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
+        applyBoardTransform();
+    });
+    boardViewport.addEventListener('pointermove', (e) => {
+        if (!panning)
+            return;
+        panX = panStart.px + (e.clientX - panStart.x);
+        panY = panStart.py + (e.clientY - panStart.y);
+        applyBoardTransform();
+    });
+    const endPan = () => {
+        if (!panning)
+            return;
+        panning = false;
+        applyBoardTransform();
+        saveBoardState();
+    };
+    boardViewport.addEventListener('pointerup', endPan);
+    boardViewport.addEventListener('pointercancel', endPan);
+}
+let panStart = { x: 0, y: 0, px: 0, py: 0 };
+window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space')
+        return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'))
+        return;
+    e.preventDefault();
+    spaceDown = true;
+    if (boardViewport)
+        boardViewport.style.cursor = 'grab';
+});
+window.addEventListener('keyup', (e) => {
+    if (e.code !== 'Space')
+        return;
+    spaceDown = false;
+    if (boardViewport)
+        boardViewport.style.cursor = '';
+});
+// --- HUD controls ---
+document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
+    const r = boardViewport.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+    saveBoardState();
+});
+document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
+    const r = boardViewport.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+    saveBoardState();
+});
+document.getElementById('btn-recenter')?.addEventListener('click', recenterView);
+// --- board item dragging (via titlebar) ---
+function initBoardItem(item) {
+    const titlebar = item.querySelector('.rack-titlebar, .unit-titlebar');
+    if (titlebar) {
+        titlebar.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0)
+                return;
+            e.preventDefault();
+            const startX = e.clientX, startY = e.clientY;
+            const left = parseFloat(item.style.left) || 0;
+            const top = parseFloat(item.style.top) || 0;
+            const s0 = screenToBoard(startX, startY);
+            item.classList.add('dragging');
+            item.setPointerCapture(e.pointerId);
+            const move = (me) => {
+                const d = screenToBoard(me.clientX, me.clientY);
+                item.style.left = `${left + (d.x - s0.x)}px`;
+                item.style.top = `${top + (d.y - s0.y)}px`;
+            };
+            const up = () => {
+                item.classList.remove('dragging');
+                item.removeEventListener('pointermove', move);
+                item.removeEventListener('pointerup', up);
+                item.removeEventListener('pointercancel', up);
+                saveBoardState();
+            };
+            item.addEventListener('pointermove', move);
+            item.addEventListener('pointerup', up);
+            item.addEventListener('pointercancel', up);
+        });
+    }
+    const close = item.querySelector('.rack-close, .unit-close');
+    close?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.dataset.id === 'mixer' || item.dataset.id === 'seq') {
+            item.classList.add('unit-hidden');
+        }
+        else {
+            item.remove();
+        }
+        saveBoardState();
+    });
+}
+// --- hardware catalog ---
+const UNIT_SPECS = {
+    eq: {
+        title: 'GRAPHIC EQ',
+        knobs: [
+            { label: '125', cap: '#5db2ff', deg: 0 },
+            { label: '250', cap: '#5db2ff', deg: 20 },
+            { label: '500', cap: '#5db2ff', deg: 45 },
+            { label: '1K', cap: '#5db2ff', deg: 70 },
+            { label: '2K', cap: '#5db2ff', deg: 45 },
+            { label: '4K', cap: '#5db2ff', deg: 20 },
+            { label: '8K', cap: '#5db2ff', deg: 0 },
+        ],
+        toggles: ['EQ IN'],
+        withMeter: true,
+    },
+    'parametric-eq': {
+        title: 'PARAMETRIC EQ',
+        knobs: [
+            { label: 'FREQ', cap: '#2980b9', deg: 30 },
+            { label: 'GAIN', cap: '#e67e22', deg: 0 },
+            { label: 'Q', cap: '#f1c40f', deg: 60 },
+        ],
+        toggles: ['IN'],
+        withMeter: true,
+    },
+    'tape-delay': {
+        title: 'TAPE DELAY',
+        knobs: [
+            { label: 'TIME', cap: '#2980b9', deg: 30 },
+            { label: 'FEED', cap: '#e67e22', deg: 40 },
+            { label: 'MIX', cap: '#f1c40f', deg: 60 },
+            { label: 'WOBBLE', cap: '#34495e', deg: 15 },
+        ],
+        toggles: ['SYNC', 'PING-PONG'],
+        withMeter: true,
+    },
+    reverb: {
+        title: 'REVERB',
+        knobs: [
+            { label: 'SIZE', cap: '#2980b9', deg: 70 },
+            { label: 'DAMP', cap: '#5db2ff', deg: 30 },
+            { label: 'MIX', cap: '#f1c40f', deg: 50 },
+        ],
+        toggles: ['PLATE'],
+        withMeter: true,
+    },
+    compressor: {
+        title: 'COMPRESSOR',
+        knobs: [
+            { label: 'THRESH', cap: '#e67e22', deg: 60 },
+            { label: 'RATIO', cap: '#f1c40f', deg: 30 },
+            { label: 'ATTACK', cap: '#5db2ff', deg: 20 },
+            { label: 'RELEASE', cap: '#5db2ff', deg: 70 },
+            { label: 'MAKEUP', cap: '#e67e22', deg: 45 },
+        ],
+        toggles: ['COMP IN'],
+        withFader: true,
+        withMeter: true,
+    },
+    synth: {
+        title: 'SYNTH',
+        knobs: [
+            { label: 'OSC1', cap: '#f1c40f', deg: 30 },
+            { label: 'OSC2', cap: '#f1c40f', deg: -30 },
+            { label: 'CUTOFF', cap: '#e67e22', deg: 45 },
+            { label: 'RES', cap: '#5db2ff', deg: 70 },
+            { label: 'ENV', cap: '#2980b9', deg: 0 },
+            { label: 'LFO', cap: '#34495e', deg: 60 },
+        ],
+        toggles: ['MONO', 'LEGATO'],
+        withFader: true,
+    },
+};
+let spawnCounter = 0;
+function spawnUnit(kind, x, y, idOverride) {
+    const spec = UNIT_SPECS[kind];
+    if (!spec || !board)
+        return null;
+    spawnCounter++;
+    const id = idOverride || `hw-${Date.now().toString(36)}-${spawnCounter}`;
+    const el = document.createElement('div');
+    el.className = 'board-item unit spawned';
+    el.dataset.kind = kind;
+    el.dataset.id = id;
+    el.style.left = `${x ?? 60 + (spawnCounter % 5) * 70}px`;
+    el.style.top = `${y ?? 560 + (spawnCounter % 4) * 70}px`;
+    const knobs = spec.knobs.map((k) => `
+    <div class="hw-knob-cell">
+      <div class="knob hw-mini" style="--cap:${k.cap};--deg:${k.deg}deg"></div>
+      <span>${k.label}</span>
+    </div>`).join('');
+    const toggles = (spec.toggles ?? []).map((t) => `<button class="hw-toggle" data-toggle="${t}">${t}</button>`).join('');
+    const meter = spec.withMeter ? `<div class="hw-led-meter"><div class="hw-led-fill"></div></div>` : '';
+    const fader = spec.withFader ? `<div class="hw-fader-track"><div class="hw-fader-cap" style="top:20px"></div></div>` : '';
+    const aux = (meter || fader) ? `<div class="hw-aux-row">${meter}${fader}</div>` : '';
+    el.innerHTML = `
+    <div class="unit-titlebar">
+      <span class="unit-name">${spec.title}</span>
+      <div class="unit-controls">
+        <button class="mini-btn unit-close" title="Close unit">×</button>
+      </div>
+    </div>
+    <div class="hw-body">
+      <div class="hw-knobs">${knobs}</div>
+      ${toggles ? `<div class="hw-toggle-row">${toggles}</div>` : ''}
+      ${aux}
+      <div class="hw-label-plate">${spec.title}</div>
+    </div>
+    <div class="unit-sockets">
+      <span class="socket-label">IN</span>
+      <span class="jack in" data-jack="${id}-in"></span>
+      <span class="socket-label">OUT</span>
+      <span class="jack out" data-jack="${id}-out"></span>
+    </div>`;
+    board.appendChild(el);
+    initBoardItem(el);
+    el.querySelectorAll('.hw-toggle').forEach((b) => {
+        b.addEventListener('click', () => b.classList.toggle('active'));
+    });
+    initJacks(el);
+    saveBoardState();
+    return el;
+}
+const cables = [];
+let cableIdCounter = 0;
+let cableSvg = null;
+if (board) {
+    cableSvg = document.createElementNS(BOARD_NS, 'svg');
+    cableSvg.setAttribute('class', 'cables');
+    board.appendChild(cableSvg);
+}
+function jackEl(jackId) {
+    return document.querySelector(`.jack[data-jack="${jackId}"]`);
+}
+function jackCenter(jack) {
+    const r = jack.getBoundingClientRect();
+    return screenToBoard(r.left + r.width / 2, r.top + r.height / 2);
+}
+function makeCablePath(x1, y1, x2, y2) {
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    const sag = Math.min(130, dist * 0.4 + 22);
+    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2 + sag;
+    return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+}
+function drawCable(g, x1, y1, x2, y2) {
+    const d = makeCablePath(x1, y1, x2, y2);
+    g.innerHTML = '';
+    for (const cls of ['cable-hit', 'cable-path', 'cable-highlight']) {
+        const p = document.createElementNS(BOARD_NS, 'path');
+        p.setAttribute('class', cls);
+        p.setAttribute('d', d);
+        g.appendChild(p);
+    }
+}
+let patchStart = null;
+function startPatch(jack) {
+    const p = jackCenter(jack);
+    const g = document.createElementNS(BOARD_NS, 'g');
+    g.setAttribute('class', 'cable');
+    drawCable(g, p.x, p.y, p.x, p.y);
+    cableSvg?.appendChild(g);
+    patchStart = { jack, g };
+    jack.classList.add('armed');
+}
+function movePatch(cx, cy) {
+    if (!patchStart)
+        return;
+    const p = screenToBoard(cx, cy);
+    const s = jackCenter(patchStart.jack);
+    drawCable(patchStart.g, s.x, s.y, p.x, p.y);
+}
+function endPatch(cx, cy) {
+    if (!patchStart)
+        return;
+    const s = patchStart;
+    s.jack.classList.remove('armed');
+    const target = document.elementFromPoint(cx, cy)?.closest('.jack');
+    if (target && target !== s.jack && target.dataset.jack) {
+        const link = { id: `c${++cableIdCounter}`, a: s.jack.dataset.jack, b: target.dataset.jack };
+        cables.push(link);
+        renderCable(link, s.g);
+        saveBoardState();
+    }
+    else {
+        s.g.remove();
+    }
+    patchStart = null;
+}
+function renderCable(link, g) {
+    const a = jackEl(link.a), b = jackEl(link.b);
+    if (!a || !b)
+        return;
+    const p1 = jackCenter(a), p2 = jackCenter(b);
+    const group = g || document.createElementNS(BOARD_NS, 'g');
+    group.setAttribute('class', 'cable');
+    group.setAttribute('data-cable', link.id);
+    drawCable(group, p1.x, p1.y, p2.x, p2.y);
+    const hit = group.querySelector('.cable-hit');
+    hit?.addEventListener('click', () => {
+        const idx = cables.findIndex((c) => c.id === link.id);
+        if (idx >= 0)
+            cables.splice(idx, 1);
+        group.remove();
+        saveBoardState();
+    });
+    if (!g)
+        cableSvg?.appendChild(group);
+}
+function initJacks(root) {
+    root.querySelectorAll('.jack').forEach((jack) => {
+        jack.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const j = e.currentTarget;
+            j.setPointerCapture(e.pointerId);
+            startPatch(j);
+        });
+        jack.addEventListener('pointermove', (e) => movePatch(e.clientX, e.clientY));
+        jack.addEventListener('pointerup', (e) => endPatch(e.clientX, e.clientY));
+        jack.addEventListener('pointercancel', () => {
+            if (patchStart) {
+                patchStart.g.remove();
+                patchStart = null;
+            }
+        });
+    });
+}
+// --- board state persistence ---
+function saveBoardState() {
+    const items = Array.from(document.querySelectorAll('.board-item')).map((el) => ({
+        id: el.dataset.id, unit: el.dataset.unit, kind: el.dataset.kind,
+        x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0,
+        hidden: el.classList.contains('unit-hidden'),
+    }));
+    const state = { zoom, panX, panY, cables, items };
+    try {
+        localStorage.setItem(BOARD_KEY, JSON.stringify(state));
+    }
+    catch { /* ignore */ }
+}
+function loadBoardState() {
+    try {
+        const raw = localStorage.getItem(BOARD_KEY);
+        if (!raw)
+            return;
+        const s = JSON.parse(raw);
+        zoom = clampZoom(s.zoom ?? 1);
+        panX = s.panX ?? 0;
+        panY = s.panY ?? 0;
+        s.items?.forEach((it) => {
+            const el = document.querySelector(`.board-item[data-id="${it.id}"]`);
+            if (el) {
+                el.style.left = `${it.x}px`;
+                el.style.top = `${it.y}px`;
+                el.classList.toggle('unit-hidden', !!it.hidden);
+            }
+            else if (it.kind) {
+                const spawned = spawnUnit(it.kind, it.x, it.y, it.id);
+                if (spawned && it.hidden)
+                    spawned.classList.add('unit-hidden');
+            }
+        });
+        s.cables?.forEach((c) => renderCable(c));
+        applyBoardTransform();
+    }
+    catch { /* ignore */ }
+}
+// --- catalog wiring ---
+document.getElementById('hw-catalog')?.addEventListener('click', (e) => {
+    const item = e.target.closest('.hw-item');
+    if (!item)
+        return;
+    const kind = item.getAttribute('data-catalog');
+    if (!kind)
+        return;
+    if (kind === 'mixer' || kind === 'sequencer') {
+        const el = document.querySelector(`.board-item[data-id="${kind}"]`);
+        if (el) {
+            el.classList.remove('unit-hidden');
+            bringToFront(el);
+            centerOn(el);
+        }
+        return;
+    }
+    const spawned = spawnUnit(kind);
+    if (spawned)
+        bringToFront(spawned);
+});
+// --- init static board items ---
+document.querySelectorAll('.board-item').forEach(initBoardItem);
+initJacks(document.body);
+loadBoardState();
+applyBoardTransform();
 window.engine = engine;
 window.sequencer = sequencer;
 window.pianoRoll = pianoRoll;
@@ -851,3 +1315,21 @@ window.openProject = openProject;
 window.loadSample = loadSample;
 window.currentLoadTrack = () => currentLoadTrack;
 window.audioBufferToWav = audioBufferToWav;
+window.boardViewState = () => ({ zoom, panX, panY, cables, items: Array.from(document.querySelectorAll('.board-item')).map((el) => ({ id: el.dataset.id, left: el.style.left, top: el.style.top, hidden: el.classList.contains('unit-hidden') })) });
+window.spawnUnit = spawnUnit;
+window.recenterView = recenterView;
+window.patchCable = (a, b) => {
+    const ja = jackEl(a), jb = jackEl(b);
+    if (!ja || !jb)
+        return false;
+    const link = { id: `c${++cableIdCounter}`, a, b };
+    cables.push(link);
+    renderCable(link);
+    saveBoardState();
+    return true;
+};
+window.zoomBoard = (f) => {
+    const r = boardViewport.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, f);
+    saveBoardState();
+};
