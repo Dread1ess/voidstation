@@ -1,0 +1,139 @@
+/* fx.css — FX Rack module: per-track insert effects (reverb/delay/EQ). */
+
+.fx {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.05)),
+    var(--panel-3);
+  border: 1px solid #050B10;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.fx-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fx-track.hw-readout {
+  min-width: 90px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.fx-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+.fx-add-buttons { display: flex; gap: 6px; }
+.fx-add.hw-btn { min-width: 0; padding: 0 8px; height: 26px; font-size: 9px; }
+
+/* --- Effect list --- */
+.fx-list { display: flex; flex-direction: column; gap: 8px; }
+.fx-empty {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 8px 4px;
+  font-family: var(--mono);
+}
+
+.fx-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: linear-gradient(180deg, #163E4E, #102F3D);
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.fx-row.fx-disabled { opacity: 0.5; }
+
+.fx-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fx-enable-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.fx-enable-label input[type="checkbox"] {
+  accent-color: var(--accent-bright);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.fx-type-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+.fx-row.fx-disabled .fx-type-name { color: var(--text-faint); }
+
+.fx-preset {
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 10px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+
+.fx-order {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.fx-order .hw-btn {
+  width: 26px;
+  min-width: 26px;
+  height: 24px;
+  padding: 0;
+  font-size: 9px;
+}
+
+/* --- Param sliders --- */
+.fx-sliders {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.fx-param {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 70px;
+}
+.fx-param-label {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  font-family: var(--mono);
+}
+.fx-param input[type="range"] {
+  width: 100%;
+  height: 16px;
+  accent-color: var(--track-2, #4F8F93);
+  cursor: pointer;
+}
+.fx-param-val {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+}

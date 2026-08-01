@@ -12,6 +12,7 @@ import { StepSequencer } from './stepSequencer.js';
 import { PianoRoll } from './pianoRoll.js';
 import { Playlist } from './playlist.js';
 import { Mixer } from './mixer.js';
+import { FxRack } from './fx.js';
 import { Sampler } from './sampler.js';
 
 export interface AppRefs {
@@ -22,6 +23,7 @@ export interface AppRefs {
   pianoRoll: PianoRoll;
   playlist: Playlist;
   mixer: Mixer;
+  fxRack: FxRack;
   sampler: Sampler;
 }
 
@@ -35,7 +37,8 @@ export function buildApp(container: HTMLElement): AppRefs {
   const prMod = wall.addModule('piano-roll', 'PIANO ROLL', 30, 470);
   const plMod = wall.addModule('playlist', 'PATTERN ARRANGER', 30, 780);
   const mixMod = wall.addModule('mixer', 'MIXING CONSOLE', 1030, 30);
-  const samplerMod = wall.addModule('sampler', 'SAMPLER', 1030, 420);
+  const fxMod = wall.addModule('fx-rack', 'FX RACK', 1030, 420);
+  const samplerMod = wall.addModule('sampler', 'SAMPLER', 1030, 810);
 
   // Mount feature modules into their rack bodies.
   const transport = new Transport(engine, transportMod.body);
@@ -43,13 +46,15 @@ export function buildApp(container: HTMLElement): AppRefs {
   const pianoRoll = new PianoRoll(engine, prMod.body);
   const playlist = new Playlist(engine, plMod.body);
   const mixer = new Mixer(engine, mixMod.body);
+  const fxRack = new FxRack(engine, fxMod.body);
   const sampler = new Sampler(engine, samplerMod.body);
 
-  // Selecting a mixer channel focuses the piano roll on that track.
+  // Selecting a mixer channel focuses the piano roll, FX rack and sampler.
   mixer.setOnSelect((track) => {
     pianoRoll.setTrack(track);
+    fxRack.setTrack(track);
     sampler.setTrack(track);
   });
 
-  return { engine, wall, transport, sequencer, pianoRoll, playlist, mixer, sampler };
+  return { engine, wall, transport, sequencer, pianoRoll, playlist, mixer, fxRack, sampler };
 }
