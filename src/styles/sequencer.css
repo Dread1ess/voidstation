@@ -1,0 +1,68 @@
+/* sequencer.css — 16-step x 5-track rubber pad matrix. */
+
+.seq {
+  display: grid;
+  grid-template-columns: 64px repeat(16, 1fr);
+  gap: 5px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.05)),
+    var(--panel-3);
+  border: 1px solid #050B10;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.seq-header { display: contents; }
+.seq-corner { }
+.seq-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+.seq-row { display: contents; }
+.seq-track {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+/* Rubber MPC pads */
+.seq-pad {
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #14242E 0%, #0C1820 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.7),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.05),
+    0 2px 3px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 50ms ease, box-shadow 80ms ease;
+}
+.seq-pad:hover { border-color: var(--accent); }
+.seq-pad:active { transform: translateY(1px); }
+
+.seq-pad.active {
+  background: linear-gradient(180deg, var(--pad) 0%, color-mix(in srgb, var(--pad) 55%, #000) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 10px color-mix(in srgb, var(--pad) 70%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.seq-pad.playing {
+  box-shadow:
+    0 0 0 2px var(--accent-bright),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 12px rgba(217, 155, 127, 0.6);
+  z-index: 2;
+}

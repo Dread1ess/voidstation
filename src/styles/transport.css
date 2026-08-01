@@ -1,0 +1,30 @@
+/* transport.css — the transport rack body. */
+
+#app .hw-module[data-module="transport"] .hw-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 14px 16px;
+}
+
+.hw-transport-cluster { flex-direction: row; gap: 8px; }
+.hw-transport-cluster .hw-btn { height: 40px; min-width: 72px; font-size: 11px; }
+.hw-play { background: linear-gradient(180deg, #5E8F53 0%, #3E6B3A 60%, #2C4F2B 100%); }
+.hw-play:hover { filter: brightness(1.15); }
+.hw-stop { background: linear-gradient(180deg, #B0584E 0%, #7A382F 60%, #5A2A23 100%); }
+.hw-stop:hover { filter: brightness(1.15); }
+
+.hw-bpm-group .hw-readout { width: 74px; font-size: 14px; }
+
+.hw-loop-group { align-items: center; }
+.hw-loop-group .hw-btn { min-width: 40px; }
+
+.hw-pattern-group .hw-readout { min-width: 160px; font-size: 12px; }
+
+.hw-file-group { flex-direction: row; gap: 8px; }
+
+.hw-export.busy { opacity: 0.6; cursor: wait; }
+
+.hw-status-group { margin-left: auto; }
+.hw-status-group .hw-status { min-width: 220px; font-size: 11px; }

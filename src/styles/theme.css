@@ -1,0 +1,29 @@
+/* theme.css — VOIDSTATION design tokens. All colors live here. */
+
+:root {
+  /* --- Palette (firm-brand) --- */
+  --bg: #0F3040;            /* petrol — room / wall base */
+  --bg-deep: #0A2633;
+  --panel: #163E4E;
+  --panel-2: #1B4A5C;
+  --panel-3: #215468;
+  --edge: #464858;          /* slate — chassis borders */
+  --edge-light: #5C5F73;
+  --accent: #A56F63;        /* terracotta */
+  --accent-bright: #D99B7F; /* peach */
+  --text: #EBE4DC;
+  --text-dim: #C6B9AD;
+  --text-faint: #9A8B7F;
+  --danger: #B0584E;
+
+  /* --- Track identity colors (steps / notes / knobs / meters) --- */
+  --track-0: #D99B7F;
+  --track-1: #A56F63;
+  --track-2: #4F8F93;
+  --track-3: #C4876B;
+  --track-4: #7E8B6F;
+
+  /* --- Fonts --- */
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  --sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}

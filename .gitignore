@@ -1,2 +1,3 @@
+# Compiled TypeScript output (tsc emits .js next to .ts)
+src/**/*.js
 node_modules/
-*.tsbuildinfo

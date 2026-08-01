@@ -1,0 +1,92 @@
+/* pianoroll.css — 24x16 note grid with a piano key strip on the left. */
+
+.pr {
+  display: flex;
+  gap: 0;
+  padding: 8px;
+  background: var(--panel-3);
+  border: 1px solid #050B10;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  --pr-row-h: 11px;
+}
+
+/* Keys strip */
+.pr-keys {
+  width: 46px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #050B10;
+  border-radius: 4px 0 0 4px;
+  overflow: hidden;
+}
+.pr-key {
+  flex: none;
+  height: var(--pr-row-h);
+  background: linear-gradient(180deg, #F6EFE6 0%, #E3D7C8 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+}
+.pr-key.black {
+  position: relative;
+  background: linear-gradient(180deg, #2E3A44 0%, #1A242D 100%);
+  z-index: 2;
+  margin: 0 0 -40% -28%;
+  width: 62%;
+  border-radius: 0 0 2px 2px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.pr-key.c-label {
+  font-size: 8px;
+  color: #6B5E52;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0 2px 3px;
+  font-family: var(--mono);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.pr-key.black.c-label { color: #8A9AA4; }
+
+/* Note grid */
+.pr-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #050B10;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+}
+.pr-row {
+  flex: none;
+  height: var(--pr-row-h);
+  display: flex;
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+}
+.pr-row.black { background: rgba(0, 0, 0, 0.25); }
+.pr-row:last-child { border-bottom: none; }
+
+.pr-cell {
+  flex: 1;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 60ms ease;
+}
+.pr-cell:nth-child(4n) { border-right-color: rgba(255, 255, 255, 0.12); }
+.pr-cell:hover { background: rgba(165, 111, 99, 0.15); }
+
+.pr-cell.active {
+  background: var(--track-3, #C4876B);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.pr-cell.tail {
+  background: var(--track-3, #C4876B);
+  opacity: 0.4;
+}
+.pr-cell.playing {
+  box-shadow: 0 0 0 2px var(--accent-bright), inset 0 0 8px rgba(217, 155, 127, 0.4);
+}
