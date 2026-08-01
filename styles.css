@@ -2406,3 +2406,413 @@ body {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================
+   TACTILITY OVERHAUL — premium analogue hardware materials
+   Matte/brushed textures, polished metallic bezels, recessed
+   wells, tactile rubber pads, warm analog LED glow.
+   ============================================================ */
+
+/* --- 1. PANEL TEXTURE & DEPTH --- */
+
+.titlebar {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #1B2C38 0%, #162631 55%, #10212C 100%);
+  border-bottom: 1px solid #0A1720;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.activity-bar {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #1B2C38 0%, #152631 100%);
+  border-right: 1px solid rgba(70, 72, 88, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #122C3B 0%, #0F2432 100%);
+  border-right: 1px solid rgba(70, 72, 88, 0.85);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05), 5px 0 20px rgba(0, 0, 0, 0.35);
+}
+
+.workspace {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.01) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #0D2A38 0%, #0B2533 100%);
+  box-shadow: inset 0 0 0 1px rgba(70, 72, 88, 0.35);
+}
+
+/* canvas: matte desk + warm peach-terracotta backlight radiating */
+.board-viewport {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 26%, rgba(217, 155, 127, 0.14), transparent 65%),
+    radial-gradient(ellipse 55% 40% at 80% 74%, rgba(165, 111, 99, 0.11), transparent 62%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 24px),
+    linear-gradient(160deg, #123746 0%, #0B2733 55%, #081D28 100%);
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.35);
+}
+
+.status-bar {
+  background: linear-gradient(180deg, #B06A5E 0%, #A56F63 45%, #96584C 100%);
+  border-top: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* editor tabs: brushed metal, active tab pressed with warm rule */
+.editor-tabs {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #1C2E3A 0%, #152732 100%);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.editor-tab {
+  background: linear-gradient(180deg, #1B2C38 0%, #162631 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.editor-tab.active {
+  background: linear-gradient(180deg, #0F3040 0%, #0C2533 100%);
+  box-shadow: inset 0 1px 0 rgba(217, 155, 127, 0.55), inset 0 0 0 1px rgba(217, 155, 127, 0.12), 0 0 12px rgba(217, 155, 127, 0.12);
+}
+
+/* --- board items: polished metallic bezel + floating warm glow --- */
+.board-item {
+  background: linear-gradient(180deg, #1C2E3A 0%, #14242F 55%, #0F1F2A 100%);
+  border: 1px solid rgba(70, 72, 88, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    0 16px 34px rgba(0, 0, 0, 0.6);
+}
+.board-item:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 22px 46px rgba(0, 0, 0, 0.62),
+    0 0 32px rgba(217, 155, 127, 0.16);
+}
+.board-item.dragging {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+    0 8px 18px rgba(0, 0, 0, 0.5),
+    0 30px 64px rgba(0, 0, 0, 0.72),
+    0 0 46px rgba(217, 155, 127, 0.28);
+}
+
+.rack-titlebar,
+.unit-titlebar {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #263844 0%, #1C2E3A 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* --- hardware catalog + HUD: machined metal bars --- */
+.hw-catalog {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, rgba(26, 40, 50, 0.97), rgba(14, 28, 38, 0.97));
+  border: 1px solid rgba(70, 72, 88, 0.8);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+.hw-item {
+  background: linear-gradient(180deg, #2A3E4A 0%, #1B2C38 60%, #142630 100%);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+.board-hud {
+  background: linear-gradient(180deg, rgba(26, 40, 50, 0.95), rgba(14, 28, 38, 0.95));
+  border: 1px solid rgba(70, 72, 88, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.hud-btn {
+  background: linear-gradient(180deg, #3A4D59 0%, #2A3E4A 45%, #1C2E3A 100%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* --- 2. STEP SEQUENCER: recessed panel + rubber MPC pads --- */
+.step-sequencer-container {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #0A1C28 0%, #081621 100%);
+  border-bottom: 1px solid rgba(70, 72, 88, 0.7);
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+.step-sequencer {
+  gap: 5px;
+  padding: 8px;
+  background: linear-gradient(180deg, #0A1C28 0%, #0E2230 100%);
+  border: 1px solid rgba(70, 72, 88, 0.75);
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.seq-track-label,
+.seq-step-num {
+  color: #9A8B7F;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.seq-step {
+  height: 26px;
+  background: linear-gradient(180deg, #142A36 0%, #0E1F2A 55%, #0A1821 100%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.55), inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
+  transition: transform 60ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.seq-step:hover {
+  background: linear-gradient(180deg, #18303D 0%, #10242F 100%);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 0 8px rgba(217, 155, 127, 0.18);
+}
+.seq-step.active {
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.55), transparent 55%),
+    var(--pad, #D99B7F);
+  border-color: rgba(217, 155, 127, 0.6);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 10px rgba(217, 155, 127, 0.7), 0 0 20px rgba(217, 155, 127, 0.35);
+}
+.seq-step[data-track="0"].active { --pad: #D99B7F; }
+.seq-step[data-track="1"].active { --pad: #A56F63; }
+.seq-step[data-track="2"].active { --pad: #4F8F93; }
+.seq-step[data-track="3"].active { --pad: #C4876B; }
+.seq-step[data-track="4"].active { --pad: #7E8B6F; }
+.seq-step.playing { filter: brightness(1.5); }
+.seq-step:active { transform: translateY(1px); }
+
+/* --- timeline: recessed well, metal ruler --- */
+.sequencer-rack .timeline {
+  background: linear-gradient(180deg, #0A1821 0%, #0D1D27 100%);
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.corner,
+.ruler {
+  background: linear-gradient(180deg, #22343F 0%, #1A2B36 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* --- 3. PIANO KEYS: hinged plastic keys with real shadows --- */
+.key-white {
+  background: linear-gradient(180deg, #F6EFE6 0%, #E3D4C2 55%, #C9B7A2 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 0 0 2px 2px;
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, 0.6), inset 0 -2px 2px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.key-white.c-label { color: #6B5E52; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4); }
+.key-black {
+  background: linear-gradient(180deg, #26323E 0%, #101A24 60%, #080F16 100%);
+  border: 1px solid #050B10;
+  border-top: none;
+  border-radius: 0 0 2px 2px;
+  box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.12), 0 2px 3px rgba(0, 0, 0, 0.55);
+}
+.pr-cell.active {
+  box-shadow: 0 0 8px rgba(217, 155, 127, 0.35);
+}
+.pr-cell.playing {
+  box-shadow: 0 0 0 2px #D99B7F, 0 0 12px rgba(217, 155, 127, 0.5);
+}
+
+/* --- 4. BUTTONS & SWITCHES: brushed metal + glowing indicator --- */
+.btn {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #3A4D59 0%, #2A3E4A 45%, #1C2E3A 100%);
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 2px 3px rgba(0, 0, 0, 0.4);
+}
+.btn:hover { filter: brightness(1.12); color: var(--text); }
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.btn.active {
+  color: var(--text);
+  background: linear-gradient(180deg, #4A5560 0%, #33434F 55%, #243640 100%);
+  border-color: rgba(217, 155, 127, 0.4);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+}
+.btn.active::after {
+  content: "";
+  position: absolute; top: 4px; right: 4px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #D99B7F;
+  box-shadow: 0 0 5px rgba(217, 155, 127, 0.95), 0 0 10px rgba(217, 155, 127, 0.5);
+}
+
+.mini-btn {
+  position: relative;
+  background: linear-gradient(180deg, #3A4D59 0%, #2A3E4A 45%, #1C2E3A 100%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.mini-btn.active-solo {
+  color: #D99B7F;
+  background: linear-gradient(180deg, #4A3426 0%, #6B4439 60%, #7A4E42 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(217, 155, 127, 0.28);
+}
+.mini-btn.active-mute {
+  color: #D99B7F;
+  background: linear-gradient(180deg, #3A241E 0%, #5A3A35 60%, #6B4439 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(176, 88, 78, 0.28);
+}
+
+.pl-btn {
+  background: linear-gradient(180deg, #3A4D59 0%, #2A3E4A 45%, #1C2E3A 100%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.pl-btn.pl-loop.active {
+  color: #D99B7F;
+  background: linear-gradient(180deg, #6B4439 0%, #7A4E42 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(217, 155, 127, 0.3);
+}
+
+/* --- 5. MUTE/SOLO: physical toggle switches --- */
+.channel-buttons .mini-btn {
+  border-radius: 2px;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.channel-buttons .mini-btn[data-mute] {
+  background: linear-gradient(180deg, #B0584E 0%, #8C4A3E 55%, #6B4439 100%);
+}
+.channel-buttons .mini-btn[data-solo] {
+  background: linear-gradient(180deg, #D99B7F 0%, #C4876B 55%, #B8794E 100%);
+  color: rgba(30, 20, 15, 0.95);
+}
+.channel-buttons .mini-btn.fx-btn {
+  background: linear-gradient(180deg, #5C5F73 0%, #464858 55%, #3A3C4C 100%);
+}
+.channel-buttons .mini-btn.active-mute::after,
+.channel-buttons .mini-btn.active-solo::after,
+.channel-buttons .mini-btn.active-fx::after {
+  box-shadow: 0 0 7px rgba(217, 155, 127, 0.95), 0 0 12px rgba(217, 155, 127, 0.5);
+}
+.channel-buttons .mini-btn.active-mute::after {
+  box-shadow: 0 0 7px rgba(176, 88, 78, 0.95), 0 0 12px rgba(176, 88, 78, 0.5);
+}
+
+/* --- 6. KNOBS: machined metal tops + shadowed index pointer --- */
+.knob {
+  border: 1px solid #050B10;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 32%),
+    repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.06) 0deg 4deg, transparent 4deg 8deg),
+    radial-gradient(circle at 32% 28%, #3A4D59 0%, var(--cap) 46%, #0A1218 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    0 3px 5px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.knob::before {
+  background: radial-gradient(circle at 35% 30%, #4E5B66, #1A2530 70%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), inset 0 -1px 2px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+.knob::after {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8D8C8 100%);
+  border-radius: 1px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5), 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+/* --- 7. METERS & FADERS: recessed LED bars / grooved tracks --- */
+.meter {
+  background: linear-gradient(90deg, #050B10, #0A1218 50%, #050B10);
+  border: 1px solid #050B10;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.meter-fill {
+  background: linear-gradient(to top,
+    #3E7C88 0%, #4F8F93 38%,
+    #7E9A93 52%, #C4876B 62%,
+    #D99B7F 76%, #A56F63 90%, #8C4A3E 100%);
+  box-shadow: 0 0 8px rgba(217, 155, 127, 0.4);
+}
+.fader {
+  border-radius: 5px;
+  background: linear-gradient(90deg, #050B10, #0A1218 50%, #050B10);
+  border: 1px solid #050B10;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+.fader-cap {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #FBF7F2 0%, var(--cap) 45%, #C9BDB1 100%);
+  border: 1px solid #050B10;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 2px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+.mixer-resize-handle::after {
+  background: linear-gradient(180deg, #FBF7F2 0%, #C9BDB1 100%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.mixer-resize-handle:hover::after,
+.mixer-resize-handle:active::after {
+  background: linear-gradient(180deg, #F6C4A6 0%, #D99B7F 100%);
+  box-shadow: 0 0 8px rgba(217, 155, 127, 0.8), 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+.channel.selected .led {
+  box-shadow: 0 0 8px rgba(217, 155, 127, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+.dsp-display {
+  background: radial-gradient(circle at 50% 30%, #0B1812 0%, #040B07 75%);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* --- 8. READOUTS & LABELS: VFD/CRT glow + etched text --- */
+.readout {
+  background: linear-gradient(180deg, #050B10 0%, #0A1218 100%);
+  border: 1px solid rgba(70, 72, 88, 0.85);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.readout-value,
+.bpm-input {
+  color: #F0D9C8;
+  text-shadow: 0 0 6px rgba(217, 155, 127, 0.6), 0 0 14px rgba(217, 155, 127, 0.3);
+}
+.status-bar .status-item {
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+.channel-name,
+.meter-scale span,
+.fader-scale span,
+.hw-knob-cell > span,
+.socket-label {
+  color: #A99B8F;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.05), 0 -1px 1px rgba(0, 0, 0, 0.7);
+}
+.tree-title,
+.section-header {
+  color: #A99B8F;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.05), 0 -1px 1px rgba(0, 0, 0, 0.7);
+}
+.hw-label-plate,
+.rack-name,
+.unit-name {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 -1px 1px rgba(0, 0, 0, 0.7);
+}
+.timeline::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #2A3E4A, #1B2C38);
+  border-radius: 5px;
+  border: 2px solid #0A2633;
+}
+.tracklist,
+.timeline {
+  scrollbar-color: #2A3E4A #0A2633;
+}
