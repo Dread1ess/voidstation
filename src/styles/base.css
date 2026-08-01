@@ -50,6 +50,7 @@ body {
 .hw-world .hw-module[data-module="playlist"] { width: 860px; }
 .hw-world .hw-module[data-module="sequencer"] { width: 560px; }
 .hw-world .hw-module[data-module="mixer"] { width: 560px; }
+.hw-world .hw-module[data-module="sampler"] { width: 340px; }
 
 /* --- HUD (zoom controls) --- */
 .hw-hud {
