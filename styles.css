@@ -38,6 +38,7 @@
   --line-row: rgba(0, 0, 0, 0.5);
 
   --track-h: 56px;
+  --pr-row-h: 9px;
   --ruler-h: 26px;
   --keys-w: 46px;
   /* Left gutter that the playlist cells, ruler corner and piano grid align
@@ -1342,8 +1343,8 @@ body {
 
 .pr-row {
   display: flex;
-  flex: 0 0 9px;
-  height: 9px;
+  flex: 0 0 var(--pr-row-h);
+  height: var(--pr-row-h);
   box-sizing: border-box;
   border-bottom: 1px solid rgba(0, 0, 0, 0.22);
   background: rgba(255, 255, 255, 0.015);
@@ -1381,7 +1382,7 @@ body {
 .pr-cell.playing {
   box-shadow: 0 0 0 2px var(--accent), inset 0 0 8px rgba(165, 111, 99, 0.4);
 }
-.key-row { position: relative; height: 14px; }
+.key-row { position: relative; height: var(--pr-row-h); }
 .key-white {
   position: absolute; inset: 0 0 0 0;
   background: linear-gradient(to bottom, #a1a6ad, #8a8e96);

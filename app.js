@@ -33,7 +33,7 @@ document.querySelectorAll('.track-row').forEach((row, i) => {
 });
 
 /* ---------- piano keys strip (2 octaves, bottom = C3) ---------- */
-const BLACK = new Set([1, 3, 6, 8, 10]);
+const BLACK = new Set([1, 3, 5, 8, 10]);
 for (let i = 0; i < 24; i++) {
   const row = document.createElement('div');
   row.className = 'key-row';
