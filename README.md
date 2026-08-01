@@ -1,9 +1,16 @@
-# VOIDSTATION — Web DAW
+# VOIDSTATION
 
 An analog-hardware-styled web DAW built with TypeScript and the Web Audio
-API. No backend and no dependencies: everything lives in the browser and
-persists to `localStorage`. The old UI is archived in git tag
-`legacy-vscode-ui`.
+API. No backend, no dependencies: patterns, samples, effects, the playlist
+and the wall layout all live in the browser and persist to `localStorage`.
+
+The interface is a canvas-style studio room — drag hardware modules (step
+sequencer, piano roll, playlist, mixer, transport) around a 3400×2800 wall,
+zoom with `Ctrl`+wheel, and arrange a full track: 16-step sequencing,
+piano-roll notes, per-track reverb/delay/EQ, sample trimming, loop regions,
+WAV export, and gesture-based undo/redo.
+
+The old UI is archived in git tag `legacy-vscode-ui`.
 
 ## Run
 
