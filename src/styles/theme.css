@@ -28,5 +28,5 @@
   --sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* --- Layout --- */
-  --topbar-h: 56px;  /* fixed header height; wall + drawer sit below it */
+  --topbar-h: 52px;  /* fixed header height; wall + drawer sit below it */
 }
