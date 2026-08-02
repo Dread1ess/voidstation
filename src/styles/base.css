@@ -39,11 +39,14 @@ body {
 .hw-world {
   position: relative;
   background-image:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 48px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 48px);
-  transition: transform 60ms ease-out;
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.008) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.008) 0 1px, transparent 1px 64px);
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout paint;
 }
-.hw-world .hw-module { will-change: transform; }
+.hw-world.smooth { transition: transform 140ms ease-out; }
+.hw-world .hw-module.dragging { will-change: transform; }
 
 /* --- Per-module sizing (fixed dimensions so scroll/pan behave) --- */
 .hw-world .hw-module[data-module="piano-roll"] { width: 300px; }

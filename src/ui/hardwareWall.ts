@@ -8,6 +8,14 @@
 //   - Modules are absolutely-positioned hardware units, draggable by header,
 //     positions persisted to localStorage.
 //
+// Performance notes:
+//   - Wheel zoom events are COALESCED into a single per-frame update
+//     (requestAnimationFrame). The handler itself does no layout work; all
+//     reads/writes happen once per frame in flushZoom().
+//   - The viewport's screen rect is cached and only refreshed on resize
+//     (the wall is inset:0 inside a position:fixed #app, so it does not move
+//     on scroll or zoom).
+//
 // One wall -> many modules. Each module is built by rack.ts (chassis) and its
 // body is filled by the feature class (transport / sequencer / piano roll /
 // playlist / mixer).
@@ -20,18 +28,37 @@ export interface WallModule {
   body: HTMLElement;
 }
 
+interface ZoomEvent {
+  factor: number;
+  x: number;
+  y: number;
+}
+
 export class HardwareWall {
   readonly viewport: HTMLElement;
   readonly world: HTMLElement;
 
   private readonly WALL_W = 3400;
   private readonly WALL_H = 2800;
+  private readonly MIN_ZOOM = 0.4;
+  // 2.0 keeps the scaled world (3400 * 2 = 6800px) under the common
+  // 8192px GPU texture limit; higher values cause re-rasterization jank.
+  private readonly MAX_ZOOM = 2.0;
 
   private modules = new Map<string, WallModule>();
   private positions: Record<string, { x: number; y: number }> = {};
   private zoom = 1;
 
   private hudZoom: HTMLElement | null = null;
+
+  // Cached viewport rect (screen position). Refreshed on window resize only.
+  private viewportRect = { left: 0, top: 0, width: 0, height: 0 };
+
+  // Coalesced zoom queue: wheel events accumulate here and are flushed once
+  // per animation frame, so several events in one frame cost one layout pass.
+  private zoomQueue: ZoomEvent[] = [];
+  private frameScheduled = false;
+  private _smoothTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(container: HTMLElement) {
     this.viewport = document.createElement('div');
@@ -43,8 +70,10 @@ export class HardwareWall {
     this.viewport.appendChild(this.world);
     container.appendChild(this.viewport);
 
+    this.refreshViewportRect();
     this.loadPositions();
     this.bindViewport();
+    this.bindResize();
     this.buildHud();
     this.applyZoom();
   }
@@ -87,27 +116,73 @@ export class HardwareWall {
       if (!e.ctrlKey && !e.metaKey) return; // let native scroll do its thing
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.12 : 0.89;
-      this.zoomAt(factor, e.clientX, e.clientY);
+      this.enqueueZoom(factor, e.clientX, e.clientY);
     }, { passive: false });
   }
 
-  private zoomAt(factor: number, clientX: number, clientY: number) {
-    const next = clamp(this.zoom * factor, 0.4, 2.5);
-    const rect = this.viewport.getBoundingClientRect();
-    // World point under the cursor before the zoom.
-    const wx = (this.viewport.scrollLeft + (clientX - rect.left)) / this.zoom;
-    const wy = (this.viewport.scrollTop + (clientY - rect.top)) / this.zoom;
-    this.zoom = next;
+  private bindResize() {
+    window.addEventListener('resize', () => this.refreshViewportRect());
+  }
+
+  private refreshViewportRect() {
+    const r = this.viewport.getBoundingClientRect();
+    this.viewportRect.left = r.left;
+    this.viewportRect.top = r.top;
+    this.viewportRect.width = r.width;
+    this.viewportRect.height = r.height;
+  }
+
+  // Queue one zoom step; the actual work happens in the next frame.
+  private enqueueZoom(factor: number, clientX: number, clientY: number) {
+    this.zoomQueue.push({ factor, x: clientX, y: clientY });
+    if (!this.frameScheduled) {
+      this.frameScheduled = true;
+      requestAnimationFrame(() => this.flushZoom());
+    }
+  }
+
+  // Apply every queued zoom step in pure arithmetic (no per-event DOM access)
+  // and commit zoom + scroll once. Runs at most once per frame.
+  private flushZoom() {
+    this.frameScheduled = false;
+    const events = this.zoomQueue;
+    this.zoomQueue = [];
+    if (!events.length) return;
+
+    const rect = this.viewportRect;
+    let z = this.zoom;
+    let sl = this.viewport.scrollLeft;
+    let st = this.viewport.scrollTop;
+
+    for (const ev of events) {
+      const next = clamp(z * ev.factor, this.MIN_ZOOM, this.MAX_ZOOM);
+      const wx = (sl + (ev.x - rect.left)) / z;
+      const wy = (st + (ev.y - rect.top)) / z;
+      z = next;
+      sl = wx * z - (ev.x - rect.left);
+      st = wy * z - (ev.y - rect.top);
+    }
+
+    this.zoom = z;
+    this.viewport.scrollLeft = sl;
+    this.viewport.scrollTop = st;
     this.applyZoom();
-    // Keep that world point under the cursor after the zoom.
-    this.viewport.scrollLeft = wx * this.zoom - (clientX - rect.left);
-    this.viewport.scrollTop = wy * this.zoom - (clientY - rect.top);
     this.syncHud();
   }
 
   setZoom(z: number) {
-    const rect = this.viewport.getBoundingClientRect();
-    this.zoomAt(clamp(z, 0.4, 2.5) / this.zoom, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    // Smooth ease-out for discrete HUD button clicks (not wheel drags).
+    this.world.classList.add('smooth');
+    if (this._smoothTimer != null) clearTimeout(this._smoothTimer);
+    this._smoothTimer = window.setTimeout(() => {
+      this._smoothTimer = null;
+      this.world.classList.remove('smooth');
+    }, 180);
+    this.enqueueZoom(
+      clamp(z, this.MIN_ZOOM, this.MAX_ZOOM) / this.zoom,
+      this.viewportRect.left + this.viewportRect.width / 2,
+      this.viewportRect.top + this.viewportRect.height / 2
+    );
   }
 
   recenter() {

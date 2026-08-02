@@ -212,10 +212,11 @@ export class Mixer {
   }
 
   // Cosmetic meter animation: react to the transport step.
+  // Uses transform: scaleY (compositor-only, no layout) instead of height.
   private pulseMeters() {
     if (!this.engine.isPlaying) {
       this.meterFills.forEach((f) => {
-        if (f) f.style.height = '4%';
+        if (f) f.style.transform = 'scaleY(0.04)';
       });
       this.lastLevels.fill(0);
       return;
@@ -227,7 +228,7 @@ export class Mixer {
       const next = this.lastLevels[i] * 0.4 + target * 0.6;
       this.lastLevels[i] = next;
       const fill = this.meterFills[i];
-      if (fill) fill.style.height = `${next.toFixed(1)}%`;
+      if (fill) fill.style.transform = `scaleY(${(next / 100).toFixed(3)})`;
     });
   }
 }

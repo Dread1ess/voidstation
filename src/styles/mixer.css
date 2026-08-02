@@ -81,14 +81,18 @@
   position: absolute;
   left: 0;
   right: 0;
+  top: 0;
   bottom: 0;
-  height: 4%;
+  height: 100%;
+  transform-origin: bottom;
+  transform: scaleY(0.04);
   background: linear-gradient(to top,
     #3E7C88 0%, #4F8F93 38%,
     #7E9A93 52%, #C4876B 62%,
     #D99B7F 76%, #A56F63 90%, #8C4A3E 100%);
   box-shadow: 0 0 8px rgba(217, 155, 127, 0.4);
-  transition: height 40ms linear;
+  will-change: transform;
+  transition: transform 40ms linear;
 }
 
 /* Mute / solo buttons */
