@@ -1,7 +1,7 @@
-// Базовые типы и интерфейсы проекта.
-// ESM-модуль: все модули явно импортируют типы отсюда (import type).
-// На этапе компиляции типы видимы, в рантайме остаётся только код утилит
-// (DEFAULT_VELOCITY, createNote) — интерфейсы стираются.
+// Shared project types and interfaces.
+// ESM module: every module explicitly imports its types from here
+// (import type). Types are erased at compile time, leaving only the
+// utility code (DEFAULT_VELOCITY, createNote) in the runtime.
 
 export type WaveformType = 'sine' | 'triangle' | 'square' | 'sawtooth' | 'noise';
 
@@ -12,13 +12,14 @@ export interface AdsrParams {
   release: number;  // seconds
 }
 
-// Одна нота в piano roll. Внутри хранится компактно: в клетке pianoGrid
-// лежит длина (шагов), голова ноты — клетка, где длина > 0.
+// A single note in the piano roll, stored compactly: the cell of pianoGrid
+// holds the note length (in steps); the note head is the cell where
+// length > 0.
 export interface Note {
   pitch: number;    // 0 = B4 (MIDI 71), 23 = C3 (MIDI 48)
   step: number;     // 0..15
-  length: number;   // длина в шагах (0 = нет ноты)
-  velocity: number; // громкость ноты 0..1
+  length: number;   // note length in steps (0 = no note)
+  velocity: number; // note velocity 0..1
 }
 
 export const DEFAULT_VELOCITY = 100;
@@ -27,14 +28,14 @@ export function createNote(pitch: number, step: number, length: number, velocity
   return { pitch, step, length, velocity };
 }
 
-// Данные одного трека ВНУТРИ паттерна.
-// pattern и pianoGrid — это ДВА НЕЗАВИСИМЫХ слоя одного трека, не выбор
-// одного из двух: pattern[16] триггерит загруженный СЭМПЛ, а pianoGrid
-// играет СИНТ-ноты. Трек может использовать оба слоя одновременно
-// (сэмпл-паттерн + мелодия синтом).
+// Data for one track INSIDE a pattern.
+// pattern and pianoGrid are TWO INDEPENDENT layers of one track, not an
+// either/or choice: pattern[16] triggers the loaded SAMPLE, while pianoGrid
+// plays SYNTH notes. A track can use both layers at once
+// (sample pattern + synth melody).
 export interface PatternTrackData {
-  pattern: boolean[];   // 16 шагов (сэмпл-слой)
-  pianoGrid: number[][]; // 24 питча x 16 шагов, значение = длина ноты в шагах (0 = пусто) (синт-слой)
+  pattern: boolean[];   // 16 steps (sample layer)
+  pianoGrid: number[][]; // 24 pitches x 16 steps, value = note length in steps (0 = empty) (synth layer)
 }
 
 export interface Pattern {
@@ -42,19 +43,19 @@ export interface Pattern {
   tracks: PatternTrackData[];
 }
 
-// Инструмент (синт-секция трека).
+// Instrument (the synth section of a track).
 export interface Instrument {
   synthType: WaveformType;
   adsr: AdsrParams;
 }
 
-// Канал микшера.
+// Mixer channel.
 export interface MixerChannel {
   name: string;
   volume: number; // 0..1
   mute: boolean;
   solo: boolean;
-  pan: number;    // -1..1 (left..right), применяется через StereoPannerNode
+  pan: number;    // -1..1 (left..right), applied via StereoPannerNode
 }
 
 // --- Per-track insert effects ---
@@ -107,8 +108,8 @@ export function createEffect(type: TrackEffect['type']): TrackEffect {
   return createEqEffect();
 }
 
-// Трек целиком: аудио-состояние + «живые» ссылки на данные текущего паттерна
-// (pattern/pianoGrid перепривязываются при switchPattern).
+// A whole track: audio state + "live" references to the current pattern's
+// data (pattern/pianoGrid are re-bound on switchPattern).
 export interface Track extends MixerChannel {
   sample: AudioBuffer | null;
   sampleData: ArrayBuffer | null;
@@ -121,14 +122,14 @@ export interface Track extends MixerChannel {
   fxIn: GainNode | null;  // first node of the live insert chain (null when empty)
   fxOut: AudioNode | null; // last node of the live insert chain (null when empty)
   fxNodes: AudioNode[];   // all live chain nodes (for disconnect on rebuild)
-  pattern: boolean[];   // ссылка на данные активного паттерна (сэмпл-слой)
-  pianoGrid: number[][]; // ссылка на данные активного паттерна (синт-слой)
+  pattern: boolean[];   // reference to the active pattern's data (sample layer)
+  pianoGrid: number[][]; // reference to the active pattern's data (synth layer)
   synthType: WaveformType;
   adsr: AdsrParams;
-  noiseBuffer: AudioBuffer | null; // внутренний кеш буфера белого шума
+  noiseBuffer: AudioBuffer | null; // internal white-noise buffer cache
 }
 
-// Аудио-настройки трека в сериализованном проекте (без pattern-данных).
+// A track's audio settings in a serialized project (no pattern data).
 export interface TrackSettings {
   name: string;
   sampleName: string | null;
@@ -144,7 +145,7 @@ export interface TrackSettings {
   effects?: TrackEffect[]; // optional so older saves still load
 }
 
-// Сериализованный проект в localStorage (version: 2).
+// Serialized project in localStorage (version: 2).
 export interface ProjectState {
   version: number;
   bpm: number;
