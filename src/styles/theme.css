@@ -26,4 +26,7 @@
   /* --- Fonts --- */
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
   --sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* --- Layout --- */
+  --topbar-h: 56px;  /* fixed header height; wall + drawer sit below it */
 }

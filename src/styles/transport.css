@@ -1,30 +1,42 @@
-/* transport.css — the transport rack body. */
+/* transport.css — controls for the top bar + the file-ops wall module.
+   Bar groups render inside .hw-topbar-host; the file group renders inside
+   the "transport-files" wall module body. */
 
-#app .hw-module[data-module="transport"] .hw-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 18px;
-  padding: 14px 16px;
+/* --- Top bar: transport clusters --- */
+/* The transport module builds groups as tag-over-control stacks; in the bar
+   we want tag + control inline, so flip the group to a row. */
+.hw-topbar-host .hw-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+}
+.hw-topbar-host .hw-tag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
 }
 
-.hw-transport-cluster { flex-direction: row; gap: 8px; }
-.hw-transport-cluster .hw-btn { height: 40px; min-width: 72px; font-size: 11px; }
+.hw-topbar-host .hw-transport-cluster {
+  gap: 6px;
+}
+.hw-topbar-host .hw-transport-cluster .hw-btn {
+  height: 36px;
+  min-width: 78px;
+  font-size: 11px;
+}
+
 .hw-play { background: linear-gradient(180deg, #5E8F53 0%, #3E6B3A 60%, #2C4F2B 100%); }
 .hw-play:hover { filter: brightness(1.15); }
 .hw-stop { background: linear-gradient(180deg, #B0584E 0%, #7A382F 60%, #5A2A23 100%); }
 .hw-stop:hover { filter: brightness(1.15); }
 
-.hw-bpm-group .hw-readout { width: 74px; font-size: 14px; }
+.hw-bpm-group .hw-readout { width: 64px; height: 32px; font-size: 14px; }
 
-.hw-loop-group { align-items: center; }
-.hw-loop-group .hw-btn { min-width: 40px; }
+.hw-loop-group .hw-btn { height: 32px; min-width: 38px; }
 
-.hw-pattern-group .hw-readout { min-width: 160px; font-size: 12px; }
-
-.hw-file-group { flex-direction: row; gap: 8px; }
-
-.hw-export.busy { opacity: 0.6; cursor: wait; }
+.hw-pattern-group .hw-readout { min-width: 150px; height: 32px; font-size: 12px; }
 
 .hw-status-group { margin-left: auto; }
-.hw-status-group .hw-status { min-width: 220px; font-size: 11px; }
+.hw-status-group .hw-status { min-width: 190px; height: 32px; font-size: 11px; }
+/* --- File ops module (on the wall) --- */
+.hw-file-group { flex-direction: row; gap: 8px; }
+.hw-export.busy { opacity: 0.6; cursor: wait; }

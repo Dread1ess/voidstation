@@ -1,0 +1,68 @@
+/* topbar.css — the fixed header above the wall. Lives outside the canvas. */
+
+.hw-topbar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: var(--topbar-h);
+  padding: 0 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, #1B4A5C 0%, #163E4E 60%, #102F3D 100%);
+  border-bottom: 1px solid var(--edge);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 10px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Brand plate */
+.hw-topbar-brand {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 10px rgba(217, 155, 127, 0.55);
+  padding: 7px 14px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+
+/* Host where the transport module mounts its bar controls. Centered
+   vertically; the transport clusters sit as inline groups in one row. */
+.hw-topbar-host {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Separator between brand and transport host */
+.hw-topbar-host::before {
+  content: "";
+  align-self: stretch;
+  width: 1px;
+  margin: 8px 0;
+  background: linear-gradient(180deg, transparent, var(--edge) 35%, var(--edge) 65%, transparent);
+}
+
+/* Sampler toggle sits at the far right of the bar */
+.hw-topbar-sampler {
+  flex-shrink: 0;
+}
+
+.hw-sampler-toggle {
+  background: linear-gradient(180deg, #4F8F93 0%, #2C5F66 60%, #1E454B 100%);
+  color: #F0F5F2;
+  height: 34px;
+  min-width: 96px;
+  font-size: 10px;
+}
+.hw-sampler-toggle:hover { filter: brightness(1.12); }

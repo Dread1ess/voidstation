@@ -1,0 +1,75 @@
+/* drawer.css — the Sampler slide-out panel anchored to the left edge.
+   Overlays the wall (translateX), never resizes it. */
+
+.hw-drawer-backdrop {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  background: rgba(5, 11, 16, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.hw-drawer-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hw-drawer {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(300px 200px at 80% 0%, rgba(217, 155, 127, 0.08), transparent 60%),
+    linear-gradient(180deg, var(--panel-3), var(--panel));
+  border-right: 1px solid var(--edge);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.5);
+  transition: transform 180ms ease;
+  will-change: transform;
+}
+
+.hw-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid #050B10;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, #5C5F73 0%, #464858 55%, #3A3C4C 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.hw-drawer-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #0A1218;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.hw-drawer-close {
+  height: 26px;
+  min-width: 30px;
+  padding: 0 6px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.hw-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+}

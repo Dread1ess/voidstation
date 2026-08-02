@@ -1,5 +1,6 @@
-// Transport module: play/stop, BPM, loop, pattern name, save/open/new/export,
-// status readout and the global keyboard shortcuts (space, Ctrl+S/O/N).
+// Transport: the controls the user touches constantly live in the top bar
+// (play/stop, BPM, loop, pattern name, status). The rare file operations
+// (save/open/new/export) live in a wall module so the bar stays uncluttered.
 
 import type { AudioEngine } from '../audio/engine.js';
 import { audioBufferToWav } from '../audio/wav.js';
@@ -8,7 +9,8 @@ import { STORAGE_KEY } from './theme.js';
 
 export class Transport {
   private engine: AudioEngine;
-  private body: HTMLElement;
+  private barBody: HTMLElement;
+  private filesBody: HTMLElement;
 
   private playBtn!: HTMLButtonElement;
   private bpmInput!: HTMLInputElement;
@@ -17,16 +19,18 @@ export class Transport {
   private statusEl!: HTMLElement;
   private exportBtn!: HTMLButtonElement;
 
-  constructor(engine: AudioEngine, body: HTMLElement) {
+  constructor(engine: AudioEngine, barBody: HTMLElement, filesBody: HTMLElement) {
     this.engine = engine;
-    this.body = body;
-    this.build();
+    this.barBody = barBody;
+    this.filesBody = filesBody;
+    this.buildBar();
+    this.buildFiles();
     this.sync();
     this.engine.onStateChange(() => this.sync());
     this.engine.onPatternChange(() => this.sync());
   }
 
-  private build() {
+  private buildBar() {
     // --- Transport cluster ---
     const cluster = document.createElement('div');
     cluster.className = 'hw-group hw-transport-cluster';
@@ -52,7 +56,7 @@ export class Transport {
     stopBtn.addEventListener('click', () => this.engine.stopTransport());
 
     cluster.append(this.playBtn, stopBtn);
-    this.body.appendChild(cluster);
+    this.barBody.appendChild(cluster);
 
     // --- BPM group ---
     const bpmGroup = document.createElement('div');
@@ -77,7 +81,7 @@ export class Transport {
     });
 
     bpmGroup.appendChild(this.bpmInput);
-    this.body.appendChild(bpmGroup);
+    this.barBody.appendChild(bpmGroup);
 
     // --- Loop group ---
     const loopGroup = document.createElement('div');
@@ -92,7 +96,7 @@ export class Transport {
       this.sync();
     });
     loopGroup.appendChild(this.loopBtn);
-    this.body.appendChild(loopGroup);
+    this.barBody.appendChild(loopGroup);
 
     // --- Pattern name readout ---
     const patGroup = document.createElement('div');
@@ -100,9 +104,19 @@ export class Transport {
     patGroup.appendChild(makeTag('PATTERN'));
     this.patternEl = makeReadout('—');
     patGroup.appendChild(this.patternEl);
-    this.body.appendChild(patGroup);
+    this.barBody.appendChild(patGroup);
 
-    // --- File operations ---
+    // --- Status readout ---
+    const statusGroup = document.createElement('div');
+    statusGroup.className = 'hw-group hw-status-group';
+    statusGroup.appendChild(makeTag('STATUS'));
+    this.statusEl = makeReadout('ready', 'hw-status');
+    statusGroup.appendChild(this.statusEl);
+    this.barBody.appendChild(statusGroup);
+  }
+
+  private buildFiles() {
+    // --- File operations (wall module: rare actions stay out of the bar) ---
     const fileGroup = document.createElement('div');
     fileGroup.className = 'hw-group hw-file-group';
 
@@ -124,15 +138,7 @@ export class Transport {
     this.exportBtn.addEventListener('click', () => this.exportWav());
 
     fileGroup.append(saveBtn, openBtn, newBtn, this.exportBtn);
-    this.body.appendChild(fileGroup);
-
-    // --- Status readout ---
-    const statusGroup = document.createElement('div');
-    statusGroup.className = 'hw-group hw-status-group';
-    statusGroup.appendChild(makeTag('STATUS'));
-    this.statusEl = makeReadout('ready', 'hw-status');
-    statusGroup.appendChild(this.statusEl);
-    this.body.appendChild(statusGroup);
+    this.filesBody.appendChild(fileGroup);
 
     this.bindShortcuts();
   }

@@ -76,6 +76,9 @@ export class HardwareWall {
     this.bindResize();
     this.buildHud();
     this.applyZoom();
+    // CSS may not be settled the very first frame; the wall sits below the
+    // top bar, so re-measure once layout is stable.
+    requestAnimationFrame(() => this.refreshViewportRect());
   }
 
   // --- Module creation -----------------------------------------------------
@@ -149,6 +152,10 @@ export class HardwareWall {
     this.zoomQueue = [];
     if (!events.length) return;
 
+    // The viewport now sits below the top bar, so its screen rect can change
+    // after construction (font/CSS settle). Re-read once per frame so the
+    // anchor math is always right; this is the one layout read flushZoom does.
+    this.refreshViewportRect();
     const rect = this.viewportRect;
     let z = this.zoom;
     let sl = this.viewport.scrollLeft;
