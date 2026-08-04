@@ -1,5 +1,7 @@
 # VOIDSTATION
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 An analog-hardware-styled web DAW built with TypeScript and the Web Audio
 API. No backend, no dependencies: patterns, samples, effects, the playlist
 and the wall layout all live in the browser and persist to `localStorage`.
@@ -16,7 +18,7 @@ The old UI is archived in git tag `legacy-vscode-ui`.
 
 ```bash
 npm install
-npm run build     # compiles src/**/*.ts → src/**/*.js
+npm run build     # compiles src/**/*.ts → dist/
 python3 -m http.server 8000
 ```
 
