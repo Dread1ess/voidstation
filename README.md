@@ -67,7 +67,7 @@ Module positions persist across reloads (`voidstation-wall-v1`).
 ## Structure
 
 ```
-index.html              — shell, links src/styles/*.css, loads src/main.js
+index.html              — shell, links src/styles/*.css, loads dist/main.js
 src/main.ts             — bootstrap: build UI, auto-load project
 src/audio/engine.ts     — Web Audio context, scheduling, effects, offline render
 src/audio/wav.ts        — WAV encode for export
@@ -75,17 +75,21 @@ src/types.ts            — shared types
 src/ui/theme.ts         — track names/colors, storage keys, clamp
 src/ui/hardwareWall.ts  — the canvas wall: pan/zoom/drag modules
 src/ui/rack.ts          — chassis primitives (panel, LED, button, readout, group)
-src/ui/transport.ts     — transport rack module
+src/ui/topbar.ts        — fixed header (brand, transport, sampler toggle)
+src/ui/drawer.ts        — slide-out sampler panel
+src/ui/transport.ts     — transport: bar controls + file-ops wall module
 src/ui/stepSequencer.ts — 16×5 pad sequencer module
 src/ui/pianoRoll.ts     — piano roll module
 src/ui/playlist.ts      — playlist module
 src/ui/mixer.ts         — mixer module
+src/ui/fx.ts            — per-track reverb/delay/EQ rack
+src/ui/sampler.ts       — sample load/trim/preview
 src/ui/app.ts           — assembly: engine + wall + modules + wiring
-src/styles/            — theme/base/racks/transport/sequencer/pianoroll/playlist/mixer
+src/styles/            — theme/base/racks/topbar/transport/drawer/sequencer/pianoroll/playlist/mixer/fx/sampler
 ```
 
-Compiled JS (`src/**/*.js`) and `node_modules/` are git-ignored; the engine
-sources live in TS, the build runs via `tsc`.
+`dist/` (compiled JS) and `node_modules/` are git-ignored; the engine
+sources live in TS, the build runs via `tsc` into `dist/`.
 
 ## Design
 
