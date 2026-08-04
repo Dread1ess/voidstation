@@ -1,3 +1,4 @@
 # Compiled TypeScript output (tsc emits to dist/)
 dist/
+src/**/*.js
 node_modules/

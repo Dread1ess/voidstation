@@ -110,7 +110,7 @@ export class Transport {
     const statusGroup = document.createElement('div');
     statusGroup.className = 'hw-group hw-status-group';
     statusGroup.appendChild(makeTag('STATUS'));
-    this.statusEl = makeReadout('ready', 'hw-status');
+    this.statusEl = makeReadout('ready', 'hw-readout hw-status');
     statusGroup.appendChild(this.statusEl);
     this.barBody.appendChild(statusGroup);
   }
