@@ -30,13 +30,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build TypeScript
         run: npm run build
+
+      - name: Prepare dist for Pages
+        run: |
+          cp index.html dist/
+          sed -i 's|src/styles/|styles/|g; s|src/main.js|main.js|' dist/index.html
+          cp -r src/styles dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: dist
 
   deploy:
     needs: build
