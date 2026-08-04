@@ -15,8 +15,6 @@ export class Drawer {
   private closeBtn: HTMLButtonElement;
   private opened = false;
 
-  private readonly onCloseHandlers: (() => void)[] = [];
-
   constructor(options: DrawerOptions = {}) {
     const width = options.width ?? 340;
 
@@ -79,10 +77,5 @@ export class Drawer {
     this.el.classList.remove('open');
     const width = this.el.style.width;
     this.el.style.transform = `translateX(-${width})`;
-    this.onCloseHandlers.forEach((h) => h());
-  }
-
-  onClose(handler: () => void) {
-    this.onCloseHandlers.push(handler);
   }
 }
