@@ -33,6 +33,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          ls -la dist/
+          ls -la dist/styles/ 2>/dev/null || echo "styles not in dist"
+
       - name: Prepare dist for Pages
         run: |
           cp index.html dist/
