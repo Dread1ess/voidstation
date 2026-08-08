@@ -33,6 +33,6 @@ jobs:
       - name: Verify build output
         run: |
           test -f dist/main.js
-          test -f dist/index.html
-          test -d dist/styles
+          test -f dist/audio/engine.js
+          test -d dist/ui
           echo "dist/ sanity check passed"
