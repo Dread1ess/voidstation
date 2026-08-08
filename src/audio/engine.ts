@@ -67,6 +67,9 @@ export class AudioEngine {
   loopStart = 0;
   loopEnd = 0;
   loopEnabled = true;
+  // Live-only metronome click (never rendered offline). Persisted with the
+  // project; the transport toggle commits it as a history transaction.
+  metronome = false;
 
   constructor() {
     this._loadPatternIntoLive(0);
@@ -186,6 +189,11 @@ export class AudioEngine {
   toggleLoop() {
     this.loopEnabled = !this.loopEnabled;
     this._notifyPatternChange();
+  }
+
+  toggleMetronome() {
+    this.metronome = !this.metronome;
+    this._notifyStateChange();
   }
 
   // --- Undo / redo (snapshot-based transactions) ---
@@ -762,6 +770,27 @@ export class AudioEngine {
 
   // --- Transport with lookahead scheduling ---
 
+  // Live-only metronome tick: a short click (square oscillator + fast gain
+  // envelope) routed to the master. `accent` marks the beat steps
+  // (0, 4, 8, 12) with a higher pitch and louder hit. Deliberately NOT used
+  // in offlineRender() so exported audio stays clean.
+  _metronomeClick(time: number, accent: boolean) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = accent ? 1600 : 1000;
+    const env = ctx.createGain();
+    const peak = accent ? 0.35 : 0.2;
+    env.gain.setValueAtTime(0.0001, time);
+    env.gain.linearRampToValueAtTime(peak, time + 0.001);
+    env.gain.exponentialRampToValueAtTime(0.0001, time + 0.045);
+    osc.connect(env);
+    env.connect(this.master);
+    osc.start(time);
+    osc.stop(time + 0.06);
+  }
+
   _scheduleStep(time: number, trackIndex: number) {
     const track = this.tracks[trackIndex];
     if (!track) return;
@@ -807,6 +836,11 @@ export class AudioEngine {
     const now = this.ctx.currentTime;
     // Schedule all steps that fall within the lookahead window
     while (this.nextStepTime < now + this.lookahead) {
+      // Metronome tick each step, accenting the beat steps (0, 4, 8, 12).
+      // Live-only: offlineRender() never schedules this.
+      if (this.metronome) {
+        this._metronomeClick(this.nextStepTime, this.stepIndex % 4 === 0);
+      }
       // Schedule this step for all tracks
       this.tracks.forEach((_, i) => this._scheduleStep(this.nextStepTime, i));
       // Advance
@@ -1032,6 +1066,7 @@ export class AudioEngine {
       loopStart: this.loopStart,
       loopEnd: this.loopEnd,
       loopEnabled: this.loopEnabled,
+      metronome: this.metronome,
       patterns: this.patterns.map((p) => ({
         name: p.name,
         tracks: p.tracks.map((t) => ({
@@ -1083,6 +1118,7 @@ export class AudioEngine {
     this.loopStart = Math.max(0, state.loopStart ?? 0);
     this.loopEnd = Math.max(0, state.loopEnd ?? 0);
     this.loopEnabled = state.loopEnabled ?? true;
+    this.metronome = state.metronome ?? false;
     if (this.loopEnd > this.loopStart) {
       this.loopStart = Math.min(this.loopStart, Math.max(0, this.loopEnd - 1));
     }
@@ -1177,6 +1213,7 @@ export class AudioEngine {
     this.loopStart = 0;
     this.loopEnd = 0;
     this.loopEnabled = true;
+    this.metronome = false;
     this._loadPatternIntoLive(0);
     this._rebuildAllGains();
     this._rebuildAllFxChains();

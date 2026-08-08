@@ -157,4 +157,6 @@ export interface ProjectState {
   loopStart?: number;
   loopEnd?: number;
   loopEnabled?: boolean;
+  // Live-only metronome toggle (optional so older saves still load).
+  metronome?: boolean;
 }

@@ -47,6 +47,7 @@ export class HardwareWall {
 
   private modules = new Map<string, WallModule>();
   private positions: Record<string, { x: number; y: number }> = {};
+  private defaults: Record<string, { x: number; y: number }> = {};
   private zoom = 1;
 
   private hudZoom: HTMLElement | null = null;
@@ -88,7 +89,8 @@ export class HardwareWall {
     el.className = 'hw-module';
     el.dataset.module = id;
 
-    const pos = this.positions[id] || { x: defX, y: defY };
+    this.defaults[id] = { x: defX, y: defY };
+    const pos = this.positions[id] || this.defaults[id];
     this.positions[id] = pos;
     el.style.left = `${pos.x}px`;
     el.style.top = `${pos.y}px`;
@@ -197,6 +199,20 @@ export class HardwareWall {
     this.viewport.scrollTop = 60;
   }
 
+  resetLayout() {
+    this.positions = { ...this.defaults };
+    this.savePositions();
+    for (const [id, mod] of this.modules) {
+      const pos = this.defaults[id];
+      if (pos) {
+        mod.el.style.left = `${pos.x}px`;
+        mod.el.style.top = `${pos.y}px`;
+      }
+    }
+    localStorage.removeItem(WALL_KEY);
+    this.recenter();
+  }
+
   private applyZoom() {
     this.world.style.transform = `scale(${this.zoom})`;
     this.world.style.transformOrigin = '0 0';
@@ -267,7 +283,13 @@ export class HardwareWall {
     home.title = 'Recenter';
     home.addEventListener('click', () => this.recenter());
 
-    hud.append(out, label, zin, home);
+    const reset = document.createElement('button');
+    reset.className = 'hw-hud-btn';
+    reset.textContent = 'RESET';
+    reset.title = 'Reset wall layout to defaults';
+    reset.addEventListener('click', () => this.resetLayout());
+
+    hud.append(out, label, zin, home, reset);
     this.viewport.appendChild(hud);
     this.syncHud();
   }

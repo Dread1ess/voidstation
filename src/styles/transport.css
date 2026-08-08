@@ -1,6 +1,6 @@
 /* transport.css — controls for the top bar + the file-ops wall module.
-   Bar groups render inside .hw-topbar-host; the file group renders inside
-   the "transport-files" wall module body. */
+  Bar groups render inside .hw-topbar-host; the file group renders inside
+  the "transport-files" wall module body. */
 
 /* --- Top bar: transport clusters --- */
 /* The transport module builds groups as tag-over-control stacks; in the bar
@@ -31,7 +31,39 @@
 
 .hw-bpm-group .hw-readout { width: 54px; height: 22px; font-size: 13px; }
 
+.hw-tap {
+  height: 22px;
+  min-width: 44px;
+  font-size: 9px;
+}
+
 .hw-loop-group .hw-btn { height: 22px; min-width: 30px; }
+
+.hw-mtrn-group .hw-btn {
+  height: 22px;
+  min-width: 50px;
+  font-size: 9px;
+}
+.hw-mtrn-group .hw-btn.active {
+  background: linear-gradient(180deg, #5E8F53 0%, #3E6B3A 60%, #2C4F2B 100%);
+}
+
+.hw-history-group .hw-btn {
+  height: 22px;
+  min-width: 60px;
+  font-size: 9px;
+}
+.hw-history-group .hw-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.hw-position-group .hw-readout {
+  width: 50px;
+  height: 22px;
+  font-size: 11px;
+  text-align: center;
+}
 
 .hw-pattern-group .hw-readout { min-width: 120px; height: 22px; font-size: 11px; }
 
