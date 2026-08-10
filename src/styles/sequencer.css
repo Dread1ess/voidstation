@@ -57,6 +57,9 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 0 10px color-mix(in srgb, var(--pad) 70%, transparent),
     0 2px 4px rgba(0, 0, 0, 0.5);
+  /* Per-step velocity accent: 1.0 = full, 0.45 = dim. */
+  opacity: var(--vel, 1);
+  filter: brightness(var(--vel, 1));
 }
 
 .seq-pad.playing {

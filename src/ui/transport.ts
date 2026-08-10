@@ -195,7 +195,22 @@ export class Transport {
     this.exportBtn.classList.add('hw-export');
     this.exportBtn.addEventListener('click', () => this.exportWav());
 
-    fileGroup.append(saveBtn, openBtn, newBtn, this.exportBtn);
+    const exportProjBtn = makeBtn('EXPORT PROJ');
+    exportProjBtn.id = 'btn-export-proj';
+    exportProjBtn.title = 'Export the project as a JSON file';
+    exportProjBtn.addEventListener('click', () => this.exportProject());
+
+    const importProjBtn = makeBtn('IMPORT PROJ');
+    importProjBtn.id = 'btn-import-proj';
+    importProjBtn.title = 'Import a project from a JSON file';
+    const importInput = document.createElement('input');
+    importInput.type = 'file';
+    importInput.accept = '.json,application/json';
+    importInput.hidden = true;
+    importInput.addEventListener('change', () => this.importProject(importInput));
+    importProjBtn.addEventListener('click', () => importInput.click());
+
+    fileGroup.append(saveBtn, openBtn, newBtn, this.exportBtn, exportProjBtn, importProjBtn, importInput);
     this.filesBody.appendChild(fileGroup);
 
     this.bindShortcuts();
@@ -326,6 +341,45 @@ export class Transport {
       this.exportBtn.classList.remove('busy');
       this.exportBtn.disabled = false;
       this.exportBtn.textContent = original;
+    }
+  }
+
+  // Download the whole project as a JSON file (mirrors the localStorage save).
+  private exportProject() {
+    try {
+      const json = JSON.stringify(this.engine.serialize(), null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'voidstation-project.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      this.setStatus('project exported');
+    } catch (err) {
+      console.error('Project export failed:', err);
+      this.setStatus('export failed', true);
+    }
+  }
+
+  // Import a project from a JSON file. In-memory only: nothing is written to
+  // localStorage until the user hits SAVE. Refreshes the UI through the same
+  // engine notifications (state/pattern change) that openProject() relies on.
+  private async importProject(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!confirm('Replace the current project with the imported file?')) return;
+    try {
+      const state = JSON.parse(await file.text());
+      this.engine.beginHistory();
+      await this.engine.deserialize(state);
+      this.engine.commitHistory();
+      this.sync();
+      this.setStatus('project imported');
+    } catch (err) {
+      console.error('Project import failed:', err);
+      this.setStatus('import failed', true);
     }
   }
 

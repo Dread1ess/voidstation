@@ -37,8 +37,8 @@ Modules (one feature = one file in `src/ui/`):
 
 | Module | Description |
 | --- | --- |
-| Transport | play/stop, BPM, loop toggle, pattern name, SAVE / OPEN / NEW / EXPORT, status readout; shortcuts `Space`, `Ctrl+S/O/N`, `Ctrl+Z/Y` |
-| Step sequencer | 16 steps × 5 tracks, rubber MPC pads, playing-column highlight |
+| Transport | play/stop, BPM, loop toggle, pattern name, SAVE / OPEN / NEW / EXPORT / EXPORT PROJ / IMPORT PROJ, status readout; shortcuts `Space`, `Ctrl+S/O/N`, `Ctrl+Z/Y` (`Ctrl+Shift+Z` = redo) |
+| Step sequencer | 16 steps × 5 tracks, rubber MPC pads, playing-column highlight, per-step velocity accents (right-click or `Shift`+click an active pad) |
 | Piano roll | 24 pitch rows (B4..C3) × 16 steps, key strip with preview, draw / resize / erase, playing-cell highlight |
 | Playlist | 20 bar cells, pattern switching, clip drag & drop, loop region with draggable handles |
 | Mixer | 5 analog channels: pan knob, LED meter, mute/solo, volume fader, channel click selects the piano-roll track |
@@ -55,6 +55,10 @@ Module positions persist across reloads (`voidstation-wall-v1`).
   4 kHz) — per-track, live and in export.
 - **Samples**: load a sample per track, canvas waveform with draggable
   start/end trim handles, preview by clicking the wave.
+- **Velocity accents**: each sequencer step carries a velocity (1.0 / 0.7 /
+  0.45). Right-click (or `Shift`+click) an active pad to cycle its accent;
+  dimmer pads play softer. Applied to both sample triggers and synth notes,
+  live and in the WAV export, and included in save/export.
 - **Piano roll**: draw / resize / erase notes, real-time playback preview.
 - **Playlist**: patterns, clip drag & drop (move/swap), loop region rendered
   into the WAV export.
@@ -62,7 +66,9 @@ Module positions persist across reloads (`voidstation-wall-v1`).
 - **Undo/redo**: snapshot history (limit 20), transaction per gesture,
   `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z`.
 - **Persistence**: project save/load to `localStorage`
-  (`voidstation-project-v1`), wall layout separately.
+  (`voidstation-project-v1`), wall layout separately, plus project
+  export/import as a JSON file (`EXPORT PROJ` / `IMPORT PROJ`); imported
+  projects load in memory until you hit SAVE.
 
 ## Structure
 

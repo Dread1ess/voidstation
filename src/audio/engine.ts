@@ -10,6 +10,7 @@ import { createEffect, createReverbEffect, createDelayEffect, createEqEffect } f
 interface SavedTrack extends TrackSettings {
   pattern?: boolean[];
   pianoGrid?: unknown;
+  velocity?: unknown;
 }
 interface SavedProject extends ProjectState {
   tracks: SavedTrack[];
@@ -40,11 +41,11 @@ export class AudioEngine {
   // Tracks: each track has sample, gain, panner, insert fx chain, pattern
   // (16 steps), pianoGrid (24x16), mute/solo/volume/pan.
   tracks: Track[] = [
-    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
-    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Kick',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1), volume: 1.0, mute: false, solo: false, synthType: 'sine', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Snare',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1), volume: 1.0, mute: false, solo: false, synthType: 'noise', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Bass',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1), volume: 1.0, mute: false, solo: false, synthType: 'sawtooth', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Synth',  sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1), volume: 1.0, mute: false, solo: false, synthType: 'square', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
+    { name: 'Pads',   sample: null, sampleData: null, sampleName: null, sampleStart: 0, sampleEnd: Infinity, gain: null, panner: null, effects: [], fxIn: null, fxOut: null, fxNodes: [], pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1), volume: 1.0, mute: false, solo: false, synthType: 'triangle', adsr: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }, pan: 0, noiseBuffer: null },
   ];
   trackCount = 5;
   _activeTrackCount = 5;
@@ -57,7 +58,7 @@ export class AudioEngine {
   // step/note data. tracks[i].pattern / tracks[i].pianoGrid are the live
   // references to the CURRENT pattern, so editing stays in-place.
   patterns: Pattern[] = [
-    { name: 'Pattern 1', tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid() })) },
+    { name: 'Pattern 1', tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1) })) },
   ];
   currentPatternIndex = 0;
   playlist: (number | undefined)[] = []; // bar index -> pattern index; [] = play active pattern
@@ -67,8 +68,9 @@ export class AudioEngine {
   loopStart = 0;
   loopEnd = 0;
   loopEnabled = true;
-  // Live-only metronome click (never rendered offline). Persisted with the
-  // project; the transport toggle commits it as a history transaction.
+  // Live-only metronome click (never rendered offline). Session preference,
+  // not a project edit: the transport toggle does NOT commit a history entry
+  // (still persisted so the user's preference survives a reload).
   metronome = false;
 
   constructor() {
@@ -92,6 +94,7 @@ export class AudioEngine {
     this.tracks.forEach((t, i) => {
       t.pattern = pat.tracks[i].pattern;
       t.pianoGrid = pat.tracks[i].pianoGrid;
+      t.velocity = pat.tracks[i].velocity;
     });
   }
 
@@ -106,7 +109,7 @@ export class AudioEngine {
     const tpl = this.patterns[this.currentPatternIndex];
     const newPat: Pattern = {
       name: name || `Pattern ${this.patterns.length + 1}`,
-      tracks: tpl.tracks.map(t => ({ pattern: [...t.pattern], pianoGrid: t.pianoGrid.map(r => [...r]) })),
+      tracks: tpl.tracks.map(t => ({ pattern: [...t.pattern], pianoGrid: t.pianoGrid.map(r => [...r]), velocity: [...t.velocity] })),
     };
     this.patterns.push(newPat);
     this.currentPatternIndex = this.patterns.length - 1;
@@ -294,29 +297,31 @@ export class AudioEngine {
     return 440 * Math.pow(2, (midi - 69) / 12);
   }
 
-  playSynthNote(trackIndex: number, midiNote: number, time: number | null = null, duration = 0.2) {
+  playSynthNote(trackIndex: number, midiNote: number, time: number | null = null, duration = 0.2, velocity = 1) {
     const ctx = this.ensureContext();
     if (!ctx) return;
     const track = this.tracks[trackIndex];
     const dest = this._voiceDest(track);
     if (!track || !dest) return;
     const ctxTime = time !== null ? time : ctx.currentTime;
-    this._buildSynthVoice(ctx, track, dest, midiNote, ctxTime, duration);
+    this._buildSynthVoice(ctx, track, dest, midiNote, ctxTime, duration, velocity);
   }
 
   // Build a synth voice (oscillator / noise + ADSR envelope) in the given
   // context and connect it to destGain. Shared by live playback and the
-  // offline renderer so exported audio matches what's heard.
+  // offline renderer so exported audio matches what's heard. `velocity`
+  // (0..1) scales the envelope peak.
   private _buildSynthVoice(
     ctx: BaseAudioContext,
     track: Track,
     destGain: GainNode,
     midiNote: number,
     time: number,
-    duration: number
+    duration: number,
+    velocity = 1
   ) {
     const adsr: AdsrParams = track.adsr;
-    const peak = 0.25;
+    const peak = 0.25 * Math.max(0, Math.min(1, velocity));
     const noteEnd = time + Math.max(0.05, duration);
     const releaseStart = noteEnd;
     const releaseEnd = releaseStart + Math.max(0.02, adsr.release);
@@ -461,6 +466,14 @@ export class AudioEngine {
     const track = this.tracks[trackIndex];
     if (track && stepIndex >= 0 && stepIndex < 16) {
       track.pattern[stepIndex] = !track.pattern[stepIndex];
+    }
+  }
+
+  // Set the per-step velocity (accent) of a single step (0..1).
+  setStepVelocity(trackIndex: number, stepIndex: number, velocity: number) {
+    const track = this.tracks[trackIndex];
+    if (track && stepIndex >= 0 && stepIndex < 16) {
+      track.velocity[stepIndex] = Math.max(0, Math.min(1, velocity));
     }
   }
 
@@ -791,6 +804,12 @@ export class AudioEngine {
     osc.stop(time + 0.06);
   }
 
+  // Per-step accent for a step in a pattern's track data (0..1, default 1).
+  private _stepVelocity(srcData: PatternTrackData | null, step: number): number {
+    const v = srcData?.velocity?.[step];
+    return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+  }
+
   _scheduleStep(time: number, trackIndex: number) {
     const track = this.tracks[trackIndex];
     if (!track) return;
@@ -807,9 +826,13 @@ export class AudioEngine {
     if (track.sample && srcData.pattern[this.stepIndex]) {
       const dest = this._voiceDest(track);
       if (dest) {
+        const velocity = this._stepVelocity(srcData, this.stepIndex);
         const src = this.ctx!.createBufferSource();
         src.buffer = track.sample;
-        src.connect(dest);
+        const gain = this.ctx!.createGain();
+        gain.gain.value = velocity;
+        src.connect(gain);
+        gain.connect(dest);
         const { start, end } = this._sampleBounds(track);
         src.start(time, start, end - start);
       }
@@ -818,13 +841,14 @@ export class AudioEngine {
     // 2) Synth note playback (if piano grid has notes on this step)
     if (srcData.pianoGrid) {
       const step = this.stepIndex;
+      const velocity = this._stepVelocity(srcData, step);
       for (let pitch = 0; pitch < 24; pitch++) {
         const lengthSteps = srcData.pianoGrid[pitch][step];
         if (lengthSteps) {
           // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
           const midi = 71 - pitch;
           const noteDuration = this.stepDuration * lengthSteps * 0.85;
-          this.playSynthNote(trackIndex, midi, time, noteDuration);
+          this.playSynthNote(trackIndex, midi, time, noteDuration, velocity);
         }
       }
     }
@@ -941,21 +965,26 @@ export class AudioEngine {
           if (!srcData) return; // empty playlist slot -> silence
           // 1) Sample playback (if sample loaded and pattern step active)
           if (track.sample && srcData.pattern[step]) {
+            const velocity = this._stepVelocity(srcData, step);
             const src = offline.createBufferSource();
             src.buffer = track.sample;
-            src.connect(dest);
+            const gain = offline.createGain();
+            gain.gain.value = velocity;
+            src.connect(gain);
+            gain.connect(dest);
             const { start, end } = this._sampleBounds(track);
             src.start(time, start, end - start);
           }
           // 2) Synth note playback (if piano grid has notes on this step)
           if (srcData.pianoGrid) {
+            const velocity = this._stepVelocity(srcData, step);
             for (let pitch = 0; pitch < 24; pitch++) {
               const lengthSteps = srcData.pianoGrid[pitch][step];
               if (lengthSteps) {
                 // pitch 0 = B4 (MIDI 71), pitch 23 = C3 (MIDI 48)
                 const midi = 71 - pitch;
                 const noteDuration = this.stepDuration * lengthSteps * 0.85;
-                this._buildSynthVoice(offline, track, dest, midi, time, noteDuration);
+                this._buildSynthVoice(offline, track, dest, midi, time, noteDuration, velocity);
               }
             }
           }
@@ -999,6 +1028,14 @@ export class AudioEngine {
       }
     }
     return grid;
+  }
+
+  // Normalize a saved per-track velocity array into 16 values in 0..1.
+  // Old saves have no velocity data -> fall back to all-1.0 (full accent).
+  _normalizeVelocity(saved: unknown): number[] {
+    const fallback = new Array(16).fill(1);
+    if (!Array.isArray(saved) || saved.length !== 16) return fallback;
+    return saved.map(v => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1));
   }
 
   // Validate + fill defaults for effects loaded from a saved project.
@@ -1072,6 +1109,7 @@ export class AudioEngine {
         tracks: p.tracks.map((t) => ({
           pattern: [...t.pattern],
           pianoGrid: t.pianoGrid.map((row) => [...row]),
+          velocity: [...t.velocity],
         })),
       })),
     };
@@ -1096,6 +1134,7 @@ export class AudioEngine {
           return {
             pattern: Array.isArray(saved.pattern) ? [...saved.pattern] : new Array(16).fill(false),
             pianoGrid: this._normalizePianoGrid(saved.pianoGrid, this._createPianoGrid()),
+            velocity: this._normalizeVelocity(saved.velocity),
           };
         }),
       }];
@@ -1108,6 +1147,7 @@ export class AudioEngine {
         pianoGrid: Array.isArray(t.pianoGrid)
           ? this._normalizePianoGrid(t.pianoGrid, this._createPianoGrid())
           : this._createPianoGrid(),
+        velocity: this._normalizeVelocity(t.velocity),
       })),
     }));
 
@@ -1206,7 +1246,7 @@ export class AudioEngine {
     });
     this.patterns = [{
       name: 'Pattern 1',
-      tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid() })),
+      tracks: this.tracks.map(() => ({ pattern: new Array(16).fill(false), pianoGrid: this._createPianoGrid(), velocity: new Array(16).fill(1) })),
     }];
     this.currentPatternIndex = 0;
     this.playlist = [];

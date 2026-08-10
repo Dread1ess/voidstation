@@ -36,6 +36,7 @@ export function createNote(pitch: number, step: number, length: number, velocity
 export interface PatternTrackData {
   pattern: boolean[];   // 16 steps (sample layer)
   pianoGrid: number[][]; // 24 pitches x 16 steps, value = note length in steps (0 = empty) (synth layer)
+  velocity: number[];   // 16 steps, per-step accent (0.45..1) applied to both layers
 }
 
 export interface Pattern {
@@ -124,6 +125,7 @@ export interface Track extends MixerChannel {
   fxNodes: AudioNode[];   // all live chain nodes (for disconnect on rebuild)
   pattern: boolean[];   // reference to the active pattern's data (sample layer)
   pianoGrid: number[][]; // reference to the active pattern's data (synth layer)
+  velocity: number[];   // reference to the active pattern's data (per-step accent)
   synthType: WaveformType;
   adsr: AdsrParams;
   noiseBuffer: AudioBuffer | null; // internal white-noise buffer cache
