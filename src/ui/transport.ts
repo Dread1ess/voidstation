@@ -332,16 +332,21 @@ export class Transport {
   // --- Keyboard shortcuts ------------------------------------------------------
 
   private toggleMetronome() {
-    this.engine.beginHistory();
+    // Metronome is a session preference, not a project edit: no history
+    // transaction so the undo stack stays clean.
     this.engine.toggleMetronome();
-    this.engine.commitHistory();
     this.sync();
   }
 
   private bindShortcuts() {
     document.addEventListener('keydown', (e) => {
-      const typing = e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
-      if (e.code === 'Space' && !typing) {
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      // Ignore global shortcuts while typing in a field or an editable region.
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      // Space triggers play/stop globally, EXCEPT when a button is focused:
+      // then the native button activation handles it and the pad button would
+      // otherwise fire twice.
+      if (e.code === 'Space' && !typing && el?.tagName !== 'BUTTON') {
         e.preventDefault();
         this.playBtn.click();
       }
@@ -350,7 +355,7 @@ export class Transport {
         if (k === 's') { e.preventDefault(); this.saveProject(); }
         if (k === 'o') { e.preventDefault(); this.openProject(); }
         if (k === 'n') { e.preventDefault(); this.newProject(); }
-        if (k === 'z') { e.preventDefault(); this.engine.undo(); }
+        if (k === 'z') { e.preventDefault(); if (e.shiftKey) this.engine.redo(); else this.engine.undo(); }
         if (k === 'y') { e.preventDefault(); this.engine.redo(); }
         if (k === 'm') { e.preventDefault(); this.toggleMetronome(); }
       }
