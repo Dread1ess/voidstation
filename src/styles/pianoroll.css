@@ -32,9 +32,14 @@
 }
 .pr-key.black {
   position: relative;
-  background: linear-gradient(180deg, #2E3A44 0%, #1A242D 100%);
   z-index: 2;
-  margin: 0 0 -40% -28%;
+  /* Flow slot stays the full row height so keys stay aligned 1:1 with the
+     grid rows; the piano-key look comes from the visual transform only. */
+  height: var(--pr-row-h);
+  transform: translateY(2px) scaleY(0.6364);
+  transform-origin: top center;
+  background: linear-gradient(180deg, #2E3A44 0%, #1A242D 100%);
+  margin: 0 0 0 -28%;
   width: 62%;
   border-radius: 0 0 2px 2px;
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
